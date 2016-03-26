@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using RestSharp;
 using RestSharp.Deserializers;
-using RestSharp.Authenticators;
 using System.Web;
-using System.Net;
 using System.Collections.Specialized;
 using System.IO;
 

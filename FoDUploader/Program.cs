@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using CommandLine;
 using Ionic.Zip;
 
@@ -66,11 +67,11 @@ namespace FoDUploader
 
             if (fi.Length < (1024f * 1024f))
             {
-                Console.WriteLine("Assessment payload prepared size: {0}{1}", Math.Round(kbyteSize, 2), " kb");
+                Console.WriteLine("Payload prepared size: {0}{1}", Math.Round(kbyteSize, 2), " kb");
             }
             else
             {
-                Console.WriteLine("Assessment payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb");
+                Console.WriteLine("Payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb");
             }          
 
             if (mbyteSize > MAXUPLOADSIZEINMB)
@@ -78,7 +79,16 @@ namespace FoDUploader
                 Console.WriteLine("Assessment payload size exceeds {0} Mb, cannot continue.", MAXUPLOADSIZEINMB);
                 Environment.Exit(1);
             }
-            // Do work
+
+            // Ensure a scan is not already running for the application prior to attempting to upload.
+            var releaseInfo = api.GetReleaseInfo();
+
+            if(releaseInfo.data.staticScanStatusId == 1 || releaseInfo.data.staticScanStatusId == 4) // "In Progress" or "Waiting"
+            {
+                Console.WriteLine("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName);
+                Environment.Exit(1);
+        //      Console.ReadKey();
+            }
 
             api.SendScanPost();
 
@@ -86,7 +96,6 @@ namespace FoDUploader
             api.RetireToken();
 
             // hold console open
-
             if (isConsole)
             {
                 Console.ReadKey();
@@ -109,7 +118,7 @@ namespace FoDUploader
             Console.WriteLine("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested");
             Console.WriteLine("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested");
             Console.WriteLine("Sonatype Report: {0}", options.sonatypeReport ? "Requested" : "Not Requested");
-            Console.WriteLine("Scan BSI URL: {0}", "\"" + options.uploadURL + "\"");
+     //     Console.WriteLine("Scan BSI URL: {0}", "\"" + options.uploadURL + "\"");
             Console.WriteLine("Assessment payload: {0}", "\"" + options.source + "\"");
         }
 

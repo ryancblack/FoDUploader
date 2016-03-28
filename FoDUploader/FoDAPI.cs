@@ -5,6 +5,8 @@ using RestSharp.Deserializers;
 using System.Web;
 using System.Collections.Specialized;
 using System.IO;
+using FoDUploader.API;
+using System.Collections.Generic;
 
 namespace FoDUploader
 {
@@ -36,8 +38,9 @@ namespace FoDUploader
         private NameValueCollection queryParameters;
 
         private bool lastFragment = false;
-        private const long SEGLEN = 1024 * 1024;  // 1Mb chunk size
-        private const int GLOBALTIMEOUTINMINUTES = 1 * 60000;
+        private const long seglen = 1024 * 1024;  // 1Mb chunk size
+        private const int globaltimeoutinminutes = 1 * 60000;
+        private const int maxretries = 5;
         private long MbbytesSent = 0;
 
 
@@ -69,12 +72,22 @@ namespace FoDUploader
 
             var postURI = client.BuildUri(request).AbsoluteUri;
 
-            Console.WriteLine("POST string: {0}", postURI);
+            //    Console.WriteLine("POST string: {0}", postURI);
 
-            var response = client.Execute(request);
+            int attempts = 0;
+            string httpStatus = "";
+            IRestResponse response;
+
+            do
+            {
+                response = client.Execute(request);
+                httpStatus = response.StatusCode.ToString();
+                attempts++;
+            }
+
+            while (httpStatus != "OK" | attempts < maxretries);
 
             return response;
-
         }
 
         public void SendScanPost()
@@ -98,7 +111,7 @@ namespace FoDUploader
             endpoint.Append("/scan/");
 
             var client = new RestClient(endpoint.ToString());
-            client.Timeout = GLOBALTIMEOUTINMINUTES * 120;
+            client.Timeout = globaltimeoutinminutes * 120;
             var request = new RestRequest(Method.POST);
 
             request.AddHeader("Authorization", "Bearer " + apiToken);
@@ -168,6 +181,8 @@ namespace FoDUploader
                 request.AddParameter("password", password);
             }
 
+            // TODO add retries on authorize
+
             try
             {
                 var response = client.Execute(request);
@@ -197,6 +212,36 @@ namespace FoDUploader
                 request.AddQueryParameter("scanPreferenceId", "2");
             }
             return request;
+        }
+
+        public ReleaseResponse GetReleaseInfo()
+        {
+
+            StringBuilder endpoint = new StringBuilder();
+            endpoint.Append(baseURI.Scheme + "://");
+            endpoint.Append(baseURI.Host + "/");
+            endpoint.Append("api/v1/Release/");
+            endpoint.Append(queryParameters.Get("pv"));
+
+            var client = new RestClient(endpoint.ToString());
+            client.Timeout = globaltimeoutinminutes * 120;
+            var request = new RestRequest(Method.GET);
+
+            request.AddHeader("Authorization", "Bearer " + apiToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            //TODO add retry on GetReleaseInfo
+            try
+            {
+               var response = client.Execute(request);
+               ReleaseResponse release = new JsonDeserializer().Deserialize<ReleaseResponse>(response);
+                return release;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
         }
 
         public bool isLoggedIn()

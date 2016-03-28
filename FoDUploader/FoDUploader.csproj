@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="API\AuthorizationResponse.cs" />
+    <Compile Include="API\ReleaseResponse.cs" />
     <Compile Include="FoDAPI.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />

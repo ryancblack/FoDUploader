@@ -87,7 +87,7 @@ namespace FoDUploader
             {
                 Console.WriteLine("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName);
                 Environment.Exit(1);
-        //      Console.ReadKey();
+         //     Console.ReadKey();
             }
 
             api.SendScanPost();

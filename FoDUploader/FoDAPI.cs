@@ -83,6 +83,10 @@ namespace FoDUploader
                 response = client.Execute(request);
                 httpStatus = response.StatusCode.ToString();
                 attempts++;
+                if (httpStatus == "OK")
+                {
+                    break;
+                }
             }
 
             while (httpStatus != "OK" | attempts < maxretries);

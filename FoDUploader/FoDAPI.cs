@@ -25,14 +25,14 @@ namespace FoDUploader
         private bool doAutomatedAudit;
         private bool includeThirdParty;
 
-        private bool isProxied;
+        //private bool isProxied;
         private bool isTokenAuth;
 
-        private string proxyURI;
-        private string proxyUsername;
-        private string proxyPassword;
-        private string ntDomain;
-        private string ntWorkstation;
+        //private string proxyURI;
+        //private string proxyUsername;
+        //private string proxyPassword;
+        //private string ntDomain;
+        //private string ntWorkstation;
 
         private string accessToken;
 

@@ -54,20 +54,20 @@ namespace FoDUploader
         [Option("includeThirdParty", DefaultValue = false, HelpText = "If set to true third-party libraries will be included in assessment results.")]
         public bool includeThirdParty { get; set; }
 
-        [Option("proxyURI", HelpText = "Your proxy URI.")]
-        public string proxyURI { get; set; }
+        //[Option("proxyURI", HelpText = "Your proxy URI.")]
+        //public string proxyURI { get; set; }
 
-        [Option("proxyUsername", HelpText = "Your proxy username.")]
-        public string proxyUsername { get; set; }
+        //[Option("proxyUsername", HelpText = "Your proxy username.")]
+        //public string proxyUsername { get; set; }
 
-        [Option("proxyPassword", HelpText = "Your proxy password.")]
-        public string proxyPassword { get; set; }
+        //[Option("proxyPassword", HelpText = "Your proxy password.")]
+        //public string proxyPassword { get; set; }
 
-        [Option("ntDomain", HelpText = "Your NT domain.")]
-        public string ntDomain { get; set; }
+        //[Option("ntDomain", HelpText = "Your NT domain.")]
+        //public string ntDomain { get; set; }
 
-        [Option("ntWorkstation", HelpText = "Your NT workstation.")]
-        public string ntWorkstation { get; set; }
+        //[Option("ntWorkstation", HelpText = "Your NT workstation.")]
+        //public string ntWorkstation { get; set; }
 
     }
 }

@@ -1,21 +1,32 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 using CommandLine;
 using Ionic.Zip;
+using System.Diagnostics;
 
 namespace FoDUploader
 {
     class Program
     {
-        static bool isTokenAuth = true;
-        static long MAXUPLOADSIZEINMB = 5000;
-        static string outputName = "fodupload-" + Guid.NewGuid().ToString(); //for the ZIP and log file names
+        private static bool isTokenAuth = true;
+        private const long MaxUploadSizeInMB = 5000;
+        private static string outputName = "fodupload-" + Guid.NewGuid().ToString(); //for the ZIP and log file names
 
         private static bool isConsole;
 
         static void Main(string[] args)
         {
+            Trace.Listeners.Clear();
+            TextWriterTraceListener twtl = new TextWriterTraceListener(Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt"));
+            twtl.Name = "Logger";
+            twtl.TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime;
+            ConsoleTraceListener ctl = new ConsoleTraceListener(false);
+            ctl.TraceOutputOptions = TraceOptions.DateTime;
+
+            Trace.Listeners.Add(twtl);
+            Trace.Listeners.Add(ctl);
+            Trace.AutoFlush = true;
+
             var options = new Options();
 
             ConfigureConsoleOutput();  // detects if app is running in a console, or not (like with TFS), will send all output to stdout for Visual Studio
@@ -28,12 +39,12 @@ namespace FoDUploader
                 }
                 else
                 {
-                    Console.WriteLine(options.GetUsage());
+                    Trace.WriteLine(options.GetUsage());
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Trace.WriteLine(ex.Message);
                 if(isConsole)
                 {
                     Console.ReadKey();
@@ -54,11 +65,11 @@ namespace FoDUploader
             {
                 if(!api.Authorize())
                 {
-                    Console.WriteLine("Error authenticating to Fortify on Demand, please check your settings.");
+                    Trace.WriteLine("Error authenticating to Fortify on Demand, please check your settings.");
                     Environment.Exit(1);
                 }
 
-                Console.WriteLine("Successfully authenticated to Fortify on Demand.");
+                Trace.WriteLine("Successfully authenticated to Fortify on Demand.");
             }
 
             FileInfo fi = new FileInfo(zipPath);
@@ -67,16 +78,16 @@ namespace FoDUploader
 
             if (fi.Length < (1024f * 1024f))
             {
-                Console.WriteLine("Payload prepared size: {0}{1}", Math.Round(kbyteSize, 2), " kb");
+                Trace.WriteLine(string.Format("Payload prepared size: {0}{1}", Math.Round(kbyteSize, 2), " kb"));
             }
             else
             {
-                Console.WriteLine("Payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb");
+                Trace.WriteLine(string.Format("Payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb"));
             }          
 
-            if (mbyteSize > MAXUPLOADSIZEINMB)
+            if (mbyteSize > MaxUploadSizeInMB)
             {
-                Console.WriteLine("Assessment payload size exceeds {0} Mb, cannot continue.", MAXUPLOADSIZEINMB);
+                Trace.WriteLine(string.Format("Assessment payload size exceeds {0} Mb, cannot continue.", MaxUploadSizeInMB));
                 Environment.Exit(1);
             }
 
@@ -85,9 +96,9 @@ namespace FoDUploader
 
             if(releaseInfo.data.staticScanStatusId == 1 || releaseInfo.data.staticScanStatusId == 4) // "In Progress" or "Waiting"
             {
-                Console.WriteLine("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName);
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
                 Environment.Exit(1);
-         //     Console.ReadKey();
+             // Console.ReadKey();
             }
 
             api.SendScanPost();
@@ -105,21 +116,21 @@ namespace FoDUploader
         private static void PrintOptions(Options options)
         {
 
-            Console.WriteLine("Fortify on Demand Uploader" + Environment.NewLine);
-            Console.WriteLine("Selected options: ");
+            Trace.WriteLine("Fortify on Demand Uploader" + Environment.NewLine);
+            Trace.WriteLine("Selected options: ");
             if (isTokenAuth)
             {
-                Console.WriteLine("Using token-based authentication, token: {0}", options.apiToken);
+                Trace.WriteLine(string.Format("Using token-based authentication, token: {0}", options.apiToken));
             }
             else
             {
-                Console.WriteLine("Using user-based authentication.");
+                Trace.WriteLine("Using user-based authentication.");
             }
-            Console.WriteLine("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested");
-            Console.WriteLine("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested");
-            Console.WriteLine("Sonatype Report: {0}", options.sonatypeReport ? "Requested" : "Not Requested");
-     //     Console.WriteLine("Scan BSI URL: {0}", "\"" + options.uploadURL + "\"");
-            Console.WriteLine("Assessment payload: {0}", "\"" + options.source + "\"");
+            Trace.WriteLine(string.Format("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested"));
+            Trace.WriteLine(string.Format("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested"));
+            Trace.WriteLine(string.Format("Sonatype Report: {0}", options.sonatypeReport ? "Requested" : "Not Requested"));
+            Trace.WriteLine(string.Format("Include Third-Party Libraries: {0}", options.includeThirdParty ? "True" : "False"));
+            Trace.WriteLine(string.Format("Assessment payload: {0}", "\"" + options.source + "\""));
         }
 
         /// <summary>
@@ -150,14 +161,19 @@ namespace FoDUploader
                 using (var zip = new ZipFile(tempZipPath))
                 {
                     zip.AddDirectory(zipPath);
+                    if (zip.Entries.Count == 0)
+                    {
+                        Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no files to ZIP. Please check your settings and try again.", zipPath));
+                        Environment.Exit(1);
+                    }
                     zip.Save();
-                    Console.WriteLine("Created ZIP: {0}", zip.Name);
+                    Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));
                     zipPath = tempZipPath;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Trace.WriteLine(ex);
             }
 
             return zipPath;

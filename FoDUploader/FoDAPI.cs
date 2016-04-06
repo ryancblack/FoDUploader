@@ -6,7 +6,8 @@ using System.Web;
 using System.Collections.Specialized;
 using System.IO;
 using FoDUploader.API;
-using System.Collections.Generic;
+using System.Diagnostics;
+
 
 namespace FoDUploader
 {
@@ -22,6 +23,7 @@ namespace FoDUploader
         private bool doSonatypeReport;
         private bool doExpressScan;
         private bool doAutomatedAudit;
+        private bool includeThirdParty;
 
         private bool isProxied;
         private bool isTokenAuth;
@@ -37,11 +39,10 @@ namespace FoDUploader
         private UriBuilder baseURI;
         private NameValueCollection queryParameters;
 
-        private bool lastFragment = false;
-        private const long seglen = 1024 * 1024;  // 1Mb chunk size
+
+        private const long seglen = (1024 * 1024) * 10;  // 10Mb chunk size
         private const int globaltimeoutinminutes = 1 * 60000;
         private const int maxretries = 5;
-        private long MbbytesSent = 0;
 
 
         public FoDAPI(Options options, string submissionZIP)
@@ -57,22 +58,34 @@ namespace FoDUploader
             this.doAutomatedAudit = options.automatedAudit;
             this.doSonatypeReport = options.sonatypeReport;
             this.doExpressScan = options.expressScan;
+            this.includeThirdParty = options.includeThirdParty;
         }
 
-        private IRestResponse SendData(RestClient client, RestRequest request, byte[] data, long fragNo, long offset)
+        private IRestResponse SendData(RestClient client, byte[] data, long fragNo, long offset)
         {
-            //pg. 134 API guide
 
-            // add fragment parameters
+            var request = new RestRequest(Method.POST);
 
-            request.AddParameter("fragNo", fragNo, ParameterType.QueryString);
-            request.AddParameter("len", data.Length, ParameterType.QueryString);
-            request.AddParameter("offset", offset, ParameterType.QueryString);
+            request.AddHeader("Authorization", "Bearer " + apiToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            // add tenant/scan parameters
+
+            request.AddQueryParameter("assessmentTypeId", queryParameters.Get("astid"));
+            request.AddQueryParameter("technologyStack", queryParameters.Get("ts"));
+            request.AddQueryParameter("languageLevel", queryParameters.Get("ll"));
+
+            // add optional assessment parameters for sonatype, automated audit, express scanning
+
+            request = AddOptionalParameters(request);
+
+            request.AddQueryParameter("fragNo", fragNo.ToString());
+            request.AddQueryParameter("offset", offset.ToString());
             request.AddParameter("application/octet-stream", data, ParameterType.RequestBody);
 
             var postURI = client.BuildUri(request).AbsoluteUri;
 
-            //    Console.WriteLine("POST string: {0}", postURI);
+     //       Trace.WriteLine(string.Format("POST string: {0}", postURI));
 
             int attempts = 0;
             string httpStatus = "";
@@ -87,23 +100,23 @@ namespace FoDUploader
                 {
                     break;
                 }
+                if (attempts >= maxretries)
+                {
+                    Trace.WriteLine("Error: Maximum POST attempts reached, please check your connection and try again later.");
+                    break;
+                }
             }
 
-            while (httpStatus != "OK" | attempts < maxretries);
+            while (httpStatus != "OK" || attempts < maxretries);
 
             return response;
         }
 
         public void SendScanPost()
         {
-            long fragNo = 0;
-            long offset = 0;
+            FileInfo fi = new FileInfo(submissionZIP);
 
-            // The max size we're allowing is 5GB, that's big, but it's abnormal for anything to be closer to 1GB - should be okay to read right into mem, for now, still should improve this
-            byte[] zipfile = File.ReadAllBytes(submissionZIP);
-            byte[] sendByteBuffer;
-            long zipFileSize = zipfile.LongLength;
-
+            Trace.WriteLine("Beginning upload.");
             // endpoint https://www.hpfod.com/api/v1/Release/{releaseId}/scan/
             // parameters ?assessmentTypeId=&technologyStack=&languageLevel=&fragNo=&offset=&
 
@@ -116,42 +129,75 @@ namespace FoDUploader
 
             var client = new RestClient(endpoint.ToString());
             client.Timeout = globaltimeoutinminutes * 120;
-            var request = new RestRequest(Method.POST);
 
-            request.AddHeader("Authorization", "Bearer " + apiToken);
-            request.AddHeader("Content-Type", "application/octet-stream");
+            // Read it in chunks
+            string uploadStatus = "";           
 
-            // add tenant/scan parameters
-
-            request.AddParameter("assessmentTypeId", queryParameters.Get("astid"), ParameterType.QueryString);
-            request.AddParameter("technologyStack", queryParameters.Get("ts"), ParameterType.QueryString);
-            request.AddParameter("languageLevel", queryParameters.Get("ll"), ParameterType.QueryString);
-
-            // add optional assessment parameters for sonatype, automated audit, express scanning
-
-            request = AddOptionalParameters(request);
-
-            // go over file and send chunks
-            // for (length of file in bytes by chunk size) SendData()
-
-            // sending it all for now (lol)
-
-            try
+            using (FileStream fs = new FileStream(submissionZIP, FileMode.Open))
             {
-                var IRestResponse = SendData(client, request, zipfile, -1, 0);
-                if (IRestResponse.Content.ToString() == "ACK")
+                byte[] readByteBuffer = new byte[seglen];
+                byte[] sendByteBuffer;
+
+                int fragmentNumber = 0;
+                int offset = 0;
+                int bytesRead = 0;
+                double bytesSent = 0;
+                double fileSize = fi.Length;
+                long chunkSize = seglen;
+
+                try
                 {
-                    Console.WriteLine("Assessment submission successful!");
+                    while ((bytesRead = fs.Read(readByteBuffer, 0, (int)chunkSize)) > 0)
+                    {
+                        decimal uploadProgress = Math.Round(((decimal)bytesSent / (decimal)fileSize) * 100.0M);
+
+                        sendByteBuffer = new byte[chunkSize];
+
+                        if (bytesRead < seglen)
+                        {
+                            fragmentNumber = -1;
+                            Array.Resize<byte>(ref sendByteBuffer, bytesRead);
+                            Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
+                            var lastPost = SendData(client, sendByteBuffer, fragmentNumber, offset);
+                            uploadStatus = lastPost.StatusCode.ToString();
+                            bytesSent += bytesRead;
+                            Trace.WriteLine(uploadProgress + "%");
+                            break;
+                        }
+                        Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
+                        var post = SendData(client, sendByteBuffer, fragmentNumber++, offset);
+                        uploadStatus = post.StatusCode.ToString();
+                        offset += bytesRead;
+                        bytesSent += bytesRead;
+
+                        if ((fs.Length - offset) < seglen)
+                        {
+                            chunkSize = (fs.Length - offset);
+                        }
+                        Trace.WriteLine(uploadProgress + "%");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine(ex);
+                    throw;
+                }
+                finally
+                {
+                    if (fs != null)
+                    {
+                        fs.Close();
+                    }
+                }
+
+                if (uploadStatus == "OK")
+                {
+                    Trace.WriteLine("Assessment submission successful.");
                 }
                 else
                 {
-                    Console.WriteLine("Error submitting to Fortify on Demand: {0}", IRestResponse.Content.ToString());
+                    Trace.WriteLine("Error submitting to Fortify on Demand.");
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                throw;
             }
         }
 
@@ -185,20 +231,30 @@ namespace FoDUploader
                 request.AddParameter("password", password);
             }
 
-            // TODO add retries on authorize
+            int attempts = 0;
 
-            try
+            do
             {
-                var response = client.Execute(request);
-                apiToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+                try
+                {
+                    attempts++;
+                    var response = client.Execute(request);
+                    apiToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+
+                    if (!string.IsNullOrEmpty(apiToken))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    apiToken = null;
+                    Trace.WriteLine(string.Format("Error count {0} retriving API access token", attempts));
+                }
             }
-            catch (Exception ex)
-            {
-                apiToken = null;
-                Console.WriteLine(ex.Message);
-                return false;
-            }
-            return true;
+            while (attempts <= maxretries);
+
+            return false;
         }
 
         private RestRequest AddOptionalParameters(RestRequest request)
@@ -214,6 +270,14 @@ namespace FoDUploader
             if (doExpressScan)
             {
                 request.AddQueryParameter("scanPreferenceId", "2");
+            }
+            if (includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
+            {
+                request.AddQueryParameter("excludeThirdPartyLibs", "false");
+            }
+            if (!includeThirdParty)
+            {
+                request.AddQueryParameter("excludeThirdPartyLibs", "true");
             }
             return request;
         }
@@ -243,7 +307,7 @@ namespace FoDUploader
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Trace.WriteLine(ex);
                 throw;
             }
         }
@@ -279,7 +343,7 @@ namespace FoDUploader
             catch (Exception ex)
             {
                 apiToken = null;
-                Console.WriteLine(ex.Message);
+                Trace.WriteLine(ex.Message);
                 throw;
             }
         }

@@ -51,6 +51,9 @@ namespace FoDUploader
         [Option("expressScan", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, the Express Scan feature will be requested.")]
         public bool expressScan { get; set; }
 
+        [Option("includeThirdParty", DefaultValue = false, HelpText = "If set to true third-party libraries will be included in assessment results.")]
+        public bool includeThirdParty { get; set; }
+
         [Option("proxyURI", HelpText = "Your proxy URI.")]
         public string proxyURI { get; set; }
 

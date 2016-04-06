@@ -20,7 +20,7 @@ namespace FoDUploader
         private string uploadURL;
         private string submissionZIP;
 
-        private bool doSonatypeReport;
+        private bool doOpensourceReport;
         private bool doExpressScan;
         private bool doAutomatedAudit;
         private bool includeThirdParty;
@@ -56,7 +56,7 @@ namespace FoDUploader
             this.userName = options.username;
             this.password = options.password;
             this.doAutomatedAudit = options.automatedAudit;
-            this.doSonatypeReport = options.sonatypeReport;
+            this.doOpensourceReport = options.opensourceReport;
             this.doExpressScan = options.expressScan;
             this.includeThirdParty = options.includeThirdParty;
         }
@@ -258,7 +258,7 @@ namespace FoDUploader
 
         private RestRequest AddOptionalParameters(RestRequest request)
         {
-            if (doSonatypeReport)
+            if (doOpensourceReport)
             {
                 request.AddQueryParameter("doSonatypeScan", "true");
             }

@@ -42,8 +42,8 @@ namespace FoDUploader
         [Option("uploadURL", Required = true, HelpText = "Your BSI URL for the target application, obtained in the customer portal.")]
         public string uploadURL { get; set; }
 
-        [Option("sonatypeReport", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, a Sonatype report will be requested.")]
-        public bool sonatypeReport { get; set; }
+        [Option("opensourceReport", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, an open-source report will be requested.")]
+        public bool opensourceReport { get; set; }
 
         [Option("automatedAudit", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, the Automated Audit feature will be requested.")]
         public bool automatedAudit { get; set; }

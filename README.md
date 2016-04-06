@@ -22,8 +22,8 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black
   --uploadURL            Required. Your BSI URL for the target application,
                          obtained in the customer portal.
 
-  --sonatypeReport       (Default: False) If set to true, and enabled in the
-                         tenant, a Sonatype report will be requested.
+  --opensourceReport       (Default: False) If set to true, and enabled in the
+                         tenant, an open-source report will be requested.
 
   --automatedAudit       (Default: False) If set to true, and enabled in the
                          tenant, the Automated Audit feature will be requested.

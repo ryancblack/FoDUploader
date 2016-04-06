@@ -34,16 +34,6 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black
   --includeThirdParty    (Default: False) If set to true third-party libraries
                          will be included in assessment results.
 
-  --proxyURI             Your proxy URI.
-
-  --proxyUsername        Your proxy username.
-
-  --proxyPassword        Your proxy password.
-
-  --ntDomain             Your NT domain.
-
-  --ntWorkstation        Your NT workstation.
-
 
 Usage: foduploader.exe --optionName "Value"
 

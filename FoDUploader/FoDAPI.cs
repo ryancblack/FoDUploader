@@ -161,7 +161,6 @@ namespace FoDUploader
                             var lastPost = SendData(client, sendByteBuffer, fragmentNumber, offset);
                             uploadStatus = lastPost.StatusCode.ToString();
                             bytesSent += bytesRead;
-                            Trace.WriteLine(uploadProgress + "%");
                             break;
                         }
                         Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);

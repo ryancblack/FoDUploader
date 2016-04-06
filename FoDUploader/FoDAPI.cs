@@ -116,7 +116,7 @@ namespace FoDUploader
         {
             FileInfo fi = new FileInfo(submissionZIP);
 
-            Trace.WriteLine("Beginning upload.");
+            Trace.WriteLine("Beginning upload....");
             // endpoint https://www.hpfod.com/api/v1/Release/{releaseId}/scan/
             // parameters ?assessmentTypeId=&technologyStack=&languageLevel=&fragNo=&offset=&
 

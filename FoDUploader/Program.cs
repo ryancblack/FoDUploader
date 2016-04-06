@@ -11,21 +11,31 @@ namespace FoDUploader
         private static bool isTokenAuth = true;
         private const long MaxUploadSizeInMB = 5000;
         private static string outputName = "fodupload-" + Guid.NewGuid().ToString(); //for the ZIP and log file names
+        private static string logName = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt");
 
         private static bool isConsole;
 
+
         static void Main(string[] args)
         {
-            Trace.Listeners.Clear();
-            TextWriterTraceListener twtl = new TextWriterTraceListener(Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt"));
-            twtl.Name = "Logger";
-            twtl.TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime;
-            ConsoleTraceListener ctl = new ConsoleTraceListener(false);
-            ctl.TraceOutputOptions = TraceOptions.DateTime;
+            try
+            {
+                Trace.Listeners.Clear();
+                TextWriterTraceListener twtl = new TextWriterTraceListener(logName);
+                twtl.Name = "Logger";
+                twtl.TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime;
+                ConsoleTraceListener ctl = new ConsoleTraceListener(false);
+                ctl.TraceOutputOptions = TraceOptions.DateTime;
 
-            Trace.Listeners.Add(twtl);
-            Trace.Listeners.Add(ctl);
-            Trace.AutoFlush = true;
+                Trace.Listeners.Add(twtl);
+                Trace.Listeners.Add(ctl);
+                Trace.AutoFlush = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
 
             var options = new Options();
 
@@ -131,6 +141,7 @@ namespace FoDUploader
             Trace.WriteLine(string.Format("Sonatype Report: {0}", options.sonatypeReport ? "Requested" : "Not Requested"));
             Trace.WriteLine(string.Format("Include Third-Party Libraries: {0}", options.includeThirdParty ? "True" : "False"));
             Trace.WriteLine(string.Format("Assessment payload: {0}", "\"" + options.source + "\""));
+            Trace.WriteLine(string.Format("Log file: {0}", "\"" + logName + "\""));
         }
 
         /// <summary>
@@ -139,8 +150,9 @@ namespace FoDUploader
         /// </summary>
         /// <param name="zipPath">Folder to be zipped</param>
         /// <param name="tempPath">Optional output path for the zipped file, defaults to Windows temp</param>
+        /// <param name="extensionFilter">Optional regex expression for filtering files zipped up</param>
         /// <returns>Path to the zip file</returns>
-        public static string ZipFolder(string zipPath, string tempPath = "")
+        public static string ZipFolder(string zipPath, string tempPath = "", string extensionFilter = "")
         {
             try
             {
@@ -148,6 +160,7 @@ namespace FoDUploader
 
                 if (!fa.HasFlag(FileAttributes.Directory) && Path.GetExtension(zipPath) == ".zip")
                 {
+                    Trace.WriteLine("Using existing ZIP file.");
                     return zipPath;
                 }
 
@@ -160,6 +173,7 @@ namespace FoDUploader
 
                 using (var zip = new ZipFile(tempZipPath))
                 {
+                    Trace.WriteLine("Compressing folder.");
                     zip.AddDirectory(zipPath);
                     if (zip.Entries.Count == 0)
                     {

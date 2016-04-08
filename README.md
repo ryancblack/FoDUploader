@@ -34,6 +34,8 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black
   --includeThirdParty    (Default: False) If set to true third-party libraries
                          will be included in assessment results.
 
+  --debug				 (Default: False) API calls and post data will be written to the log and console.
+
 
 Usage: foduploader.exe --optionName "Value"
 

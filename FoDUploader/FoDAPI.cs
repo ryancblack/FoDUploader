@@ -27,6 +27,7 @@ namespace FoDUploader
 
         //private bool isProxied;
         private bool isTokenAuth;
+        private bool isDebug;
 
         //private string proxyURI;
         //private string proxyUsername;
@@ -59,6 +60,7 @@ namespace FoDUploader
             this.doOpensourceReport = options.opensourceReport;
             this.doExpressScan = options.expressScan;
             this.includeThirdParty = options.includeThirdParty;
+            this.isDebug = options.debug;
         }
 
         private IRestResponse SendData(RestClient client, byte[] data, long fragNo, long offset)
@@ -85,7 +87,10 @@ namespace FoDUploader
 
             var postURI = client.BuildUri(request).AbsoluteUri;
 
-     //       Trace.WriteLine(string.Format("POST string: {0}", postURI));
+            if (isDebug)
+            {
+                Trace.WriteLine(string.Format("DEBUG: POST string: {0}", postURI));
+            }
 
             int attempts = 0;
             string httpStatus = "";
@@ -242,6 +247,10 @@ namespace FoDUploader
 
                     if (!string.IsNullOrEmpty(apiToken))
                     {
+                        if (isDebug)
+                        {
+                            Trace.WriteLine(string.Format("DEBUG: Authentication Token: {0}", apiToken));
+                        }
                         return true;
                     }
                 }

@@ -54,6 +54,9 @@ namespace FoDUploader
         [Option("includeThirdParty", DefaultValue = false, HelpText = "If set to true third-party libraries will be included in assessment results.")]
         public bool includeThirdParty { get; set; }
 
+        [Option("debug", DefaultValue = false, HelpText = "API calls and post data will be written to the log and console.")]
+        public bool debug { get; set; }
+
         //[Option("proxyURI", HelpText = "Your proxy URI.")]
         //public string proxyURI { get; set; }
 

@@ -1,12 +1,12 @@
 # FoDUploader
 .NET Fortify on Demand assessment uploader
 
-*** Not for production use ***
+*This software is provided as a sample only, and while tested, not intended for production use*
 
-*Options*
+**Options**
 
 FoD Uploader 1.0
-Copyright (C) 2016 HPE Fortify on Demand, Ryan Black
+Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
 
   --source               Required. The ZIP file, or directory to be zipped, for
                          submission to Fortify on Demand

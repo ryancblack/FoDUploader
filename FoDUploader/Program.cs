@@ -3,15 +3,23 @@ using System.IO;
 using CommandLine;
 using Ionic.Zip;
 using System.Diagnostics;
+using System.Collections.Specialized;
+using System.Web;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace FoDUploader
 {
     class Program
     {
         private static bool isTokenAuth = true;
+        private static bool includeAllFiles = false;
         private const long MaxUploadSizeInMB = 5000;
         private static string outputName = "fodupload-" + Guid.NewGuid().ToString(); //for the ZIP and log file names
         private static string logName = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt");
+        private static string technologyStack = "";
+        private static string languageLevel = "";
+        private static string[] supportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk" };
 
         private static bool isConsole;
 
@@ -136,6 +144,7 @@ namespace FoDUploader
             {
                 Trace.WriteLine("Using user-based authentication.");
             }
+            Trace.WriteLine(string.Format("Language Setting: {0} - {1}", technologyStack, languageLevel));
             Trace.WriteLine(string.Format("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested"));
             Trace.WriteLine(string.Format("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested"));
             Trace.WriteLine(string.Format("Sonatype Report: {0}", options.opensourceReport ? "Requested" : "Not Requested"));
@@ -150,9 +159,8 @@ namespace FoDUploader
         /// </summary>
         /// <param name="zipPath">Folder to be zipped</param>
         /// <param name="tempPath">Optional output path for the zipped file, defaults to Windows temp</param>
-        /// <param name="extensionFilter">Optional regex expression for filtering files zipped up</param>
         /// <returns>Path to the zip file</returns>
-        public static string ZipFolder(string zipPath, string tempPath = "", string extensionFilter = "")
+        public static string ZipFolder(string zipPath, string tempPath = "")
         {
             try
             {
@@ -161,7 +169,19 @@ namespace FoDUploader
                 if (!fa.HasFlag(FileAttributes.Directory) && Path.GetExtension(zipPath) == ".zip")
                 {
                     Trace.WriteLine("Using existing ZIP file.");
-                    return zipPath;
+
+                    if(includeAllFiles)
+                    {
+                        return zipPath;
+                    }
+
+                    // decompress to temp location and set zipPath to new folder
+
+                    using (ZipFile zip = new ZipFile(zipPath))
+                    {
+                        zip.ExtractAll(Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName), ExtractExistingFileAction.OverwriteSilently);
+                        zipPath = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName);
+                    }
                 }
 
                 if (string.IsNullOrEmpty(tempPath))
@@ -171,34 +191,66 @@ namespace FoDUploader
 
                 string tempZipPath = Path.Combine(tempPath, outputName + ".zip");
 
+                if (includeAllFiles || technologyStack =="OBJECTIVE-C")
+                {
+                    using (var zip = new ZipFile(tempZipPath))
+                    {
+                        Trace.WriteLine("Compressing folder without filtering...");
+                        zip.AddDirectory(zipPath);
+                        if (zip.Entries.Count == 0)
+                        {
+                            Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no files to ZIP. Please check your settings and try again.", zipPath));
+                            Environment.Exit(1);
+                        }
+                        zip.Save();
+                        Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));
+                        zipPath = tempZipPath;
+                        return zipPath;
+                    } 
+                }
+                // process supported extensions into ZIP, set zipPath to new ZIP, provide log output
+
                 using (var zip = new ZipFile(tempZipPath))
                 {
-                    Trace.WriteLine("Compressing folder.");
-                    zip.AddDirectory(zipPath);
-                    if (zip.Entries.Count == 0)
+                    var directory = new DirectoryInfo(zipPath);
+                    var files = directory.EnumerateFiles("*", SearchOption.AllDirectories).Where(x => supportedExtensions.Contains(x.Extension.ToLower())).ToList();
+
+                    List<string> assessmentFiles = new List<string>();
+
+                    foreach (FileInfo fi in files)
                     {
-                        Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no files to ZIP. Please check your settings and try again.", zipPath));
-                        Environment.Exit(1);
+                        assessmentFiles.Add(fi.FullName);
                     }
+
+                    Trace.WriteLine("Compressing folder filtered by supported file extensions..");
+                    zip.AddFiles(assessmentFiles, true, "");
                     zip.Save();
                     Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));
-                    zipPath = tempZipPath;
+
+                    return tempZipPath;
                 }
             }
             catch (Exception ex)
             {
                 Trace.WriteLine(ex);
+                Environment.Exit(-1);
             }
 
             return zipPath;
         }
 
         /// <summary>
-        /// Toggles authtoken/user auth
+        /// Toggles authtoken/user auth, sets language information for ZIP filtering, and preference to include all application content
         /// </summary>
         /// <param name="options">command line options object</param>
         private static void SetAdditionalOptions(Options options)
         {
+            NameValueCollection queryParameters = GetqueryParameters(new UriBuilder(options.uploadURL));
+            technologyStack = queryParameters.Get("ts");
+            languageLevel = queryParameters.Get("ll");
+
+            includeAllFiles = options.includeAllPayload;
+
             if (string.IsNullOrEmpty(options.apiToken))
             {
                 isTokenAuth = false;
@@ -220,6 +272,11 @@ namespace FoDUploader
                 streamwriter.AutoFlush = true;
                 Console.SetOut(streamwriter);
             }
+        }
+        public static NameValueCollection GetqueryParameters(UriBuilder postURL)
+        {
+            NameValueCollection queryParameters = HttpUtility.ParseQueryString(postURL.Query);
+            return queryParameters;
         }
     }
 }

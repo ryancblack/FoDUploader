@@ -54,6 +54,9 @@ namespace FoDUploader
         [Option("includeThirdParty", DefaultValue = false, HelpText = "If set to true third-party libraries will be included in assessment results.")]
         public bool includeThirdParty { get; set; }
 
+        [Option("includeAllPayload", DefaultValue = false, HelpText = "If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
+        public bool includeAllPayload { get; set; }
+
         [Option("debug", DefaultValue = false, HelpText = "API calls and post data will be written to the log and console.")]
         public bool debug { get; set; }
 

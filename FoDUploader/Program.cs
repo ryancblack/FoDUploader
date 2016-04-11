@@ -223,6 +223,11 @@ namespace FoDUploader
                     }
 
                     Trace.WriteLine("Compressing folder filtered by supported file extensions..");
+                    if (zip.Entries.Count == 0)
+                    {
+                        Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no scannable files to ZIP. Please check your application folder and try again.", zipPath));
+                        Environment.Exit(1);
+                    }
                     zip.AddFiles(assessmentFiles, true, "");
                     zip.Save();
                     Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));

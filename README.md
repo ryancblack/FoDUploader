@@ -11,7 +11,7 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
   --source               Required. The ZIP file, or directory to be zipped, for
                          submission to Fortify on Demand
 
-  --username             Your portal username.
+  --username             Your portal tenant and username seperated by a backslash, e.g. Company\userOne
 
   --password             Your portal password.
 

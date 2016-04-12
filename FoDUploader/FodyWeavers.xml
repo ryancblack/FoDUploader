@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Weavers>
+  <Costura>
+    <IncludeAssemblies>
+      CommandLine
+      Ionic.Zip
+      RestSharp
+      System.Net.Http.Formatting
+    </IncludeAssemblies>
+  </Costura>
+</Weavers>

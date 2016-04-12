@@ -254,7 +254,7 @@ namespace FoDUploader
             technologyStack = queryParameters.Get("ts");
             languageLevel = queryParameters.Get("ll");
 
-            includeAllFiles = options.includeAllPayload;
+            includeAllFiles = options.includeAllFiles;
 
             if (string.IsNullOrEmpty(options.apiToken))
             {

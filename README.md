@@ -5,7 +5,7 @@
 
 **Options**
 
-FoD Uploader 1.0
+FoD Uploader 1.01
 Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
 
   --source               Required. The ZIP file, or directory to be zipped, for
@@ -36,7 +36,7 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
 
   --debug				 (Default: False) API calls and post data will be written to the log and console.
 
-  --includeAllPayload	 (Default: False) If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of "false" will greatly reduce the size of the submission with no impact to assessment quality.
+  --includeAllFiles	     (Default: False) If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of "false" will greatly reduce the size of the submission with no impact to assessment quality.
 
 
 Usage: foduploader.exe --optionName "Value"

@@ -17,7 +17,6 @@ namespace FoDUploader
         private string apiSecret;
         private string userName;
         private string password;
-        private string uploadURL;
         private string submissionZIP;
 
         private bool doOpensourceReport;

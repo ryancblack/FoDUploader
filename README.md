@@ -5,7 +5,7 @@
 
 **Options**
 
-FoD Uploader 1.01
+FoD Uploader 1.02
 Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
 
   --source               Required. The ZIP file, or directory to be zipped, for

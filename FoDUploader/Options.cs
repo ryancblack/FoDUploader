@@ -10,7 +10,7 @@ namespace FoDUploader
         {
             var help = new HelpText
             {
-                Heading = new HeadingInfo("FoD Uploader", "1.01"),
+                Heading = new HeadingInfo("FoD Uploader", "1.02"),
                 Copyright = new CopyrightInfo("HPE Fortify on Demand, Ryan Black", 2016),
                 AdditionalNewLineAfterOption = true,
                 AddDashesToOption = true

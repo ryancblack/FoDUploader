@@ -7,7 +7,7 @@ using System.Collections.Specialized;
 using System.IO;
 using FoDUploader.API;
 using System.Diagnostics;
-
+using System.Net;
 
 namespace FoDUploader
 {
@@ -25,15 +25,8 @@ namespace FoDUploader
         private bool doAutomatedAudit;
         private bool includeThirdParty;
 
-        //private bool isProxied;
         private bool isTokenAuth;
         private bool isDebug;
-
-        //private string proxyURI;
-        //private string proxyUsername;
-        //private string proxyPassword;
-        //private string ntDomain;
-        //private string ntWorkstation;
 
         private string accessToken;
 
@@ -346,7 +339,7 @@ namespace FoDUploader
             try
             {
                 var response = client.Execute(request);
-                apiToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+                accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
             }
             catch (Exception ex)
             {

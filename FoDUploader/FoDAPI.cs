@@ -60,7 +60,7 @@ namespace FoDUploader
 
             var request = new RestRequest(Method.POST);
 
-            request.AddHeader("Authorization", "Bearer " + apiToken);
+            request.AddHeader("Authorization", "Bearer " + accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
             // add tenant/scan parameters
@@ -235,20 +235,20 @@ namespace FoDUploader
                 {
                     attempts++;
                     var response = client.Execute(request);
-                    apiToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+                    accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
 
-                    if (!string.IsNullOrEmpty(apiToken))
+                    if (!string.IsNullOrEmpty(accessToken))
                     {
                         if (isDebug)
                         {
-                            Trace.WriteLine(string.Format("DEBUG: Authentication Token: {0}", apiToken));
+                            Trace.WriteLine(string.Format("DEBUG: Authentication Token: {0}", accessToken));
                         }
                         return true;
                     }
                 }
                 catch (Exception ex)
                 {
-                    apiToken = null;
+                    accessToken = null;
                     Trace.WriteLine(string.Format("Error count {0} retriving API access token", attempts));
                 }
             }
@@ -295,7 +295,7 @@ namespace FoDUploader
             client.Timeout = globaltimeoutinminutes * 120;
             var request = new RestRequest(Method.GET);
 
-            request.AddHeader("Authorization", "Bearer " + apiToken);
+            request.AddHeader("Authorization", "Bearer " + accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
             //TODO add retry on GetReleaseInfo
@@ -342,7 +342,7 @@ namespace FoDUploader
             }
             catch (Exception ex)
             {
-                apiToken = null;
+                accessToken = null;
                 Trace.WriteLine(ex.Message);
                 throw;
             }

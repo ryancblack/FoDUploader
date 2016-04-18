@@ -3,6 +3,8 @@
 
 *This software is provided as a sample only, and while tested, not intended for production use*
 
+Proxy connections are supported provided they are configured in Internet Explorer.
+
 **Options**
 
 FoD Uploader 1.02

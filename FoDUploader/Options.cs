@@ -59,21 +59,5 @@ namespace FoDUploader
 
         [Option("debug", DefaultValue = false, HelpText = "API calls and post data will be written to the log and console.")]
         public bool debug { get; set; }
-
-        //[Option("proxyURI", HelpText = "Your proxy URI.")]
-        //public string proxyURI { get; set; }
-
-        //[Option("proxyUsername", HelpText = "Your proxy username.")]
-        //public string proxyUsername { get; set; }
-
-        //[Option("proxyPassword", HelpText = "Your proxy password.")]
-        //public string proxyPassword { get; set; }
-
-        //[Option("ntDomain", HelpText = "Your NT domain.")]
-        //public string ntDomain { get; set; }
-
-        //[Option("ntWorkstation", HelpText = "Your NT workstation.")]
-        //public string ntWorkstation { get; set; }
-
     }
 }

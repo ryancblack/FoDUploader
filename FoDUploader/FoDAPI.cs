@@ -223,7 +223,7 @@ namespace FoDUploader
             else
             {
                 request.AddParameter("grant_type", "password");
-                request.AddParameter("username", userName);
+                request.AddParameter("username", queryParameters.Get("tc") + @"\" + userName);
                 request.AddParameter("password", password);
             }
 

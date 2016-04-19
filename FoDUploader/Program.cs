@@ -147,7 +147,7 @@ namespace FoDUploader
             Trace.WriteLine(string.Format("Language Setting: {0} - {1}", technologyStack, languageLevel));
             Trace.WriteLine(string.Format("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested"));
             Trace.WriteLine(string.Format("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested"));
-            Trace.WriteLine(string.Format("Sonatype Report: {0}", options.opensourceReport ? "Requested" : "Not Requested"));
+            Trace.WriteLine(string.Format("Open-source Report: {0}", options.opensourceReport ? "Requested" : "Not Requested"));
             Trace.WriteLine(string.Format("Include Third-Party Libraries: {0}", options.includeThirdParty ? "True" : "False"));
             Trace.WriteLine(string.Format("Assessment payload: {0}", "\"" + options.source + "\""));
             Trace.WriteLine(string.Format("Log file: {0}", "\"" + logName + "\""));

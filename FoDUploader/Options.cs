@@ -27,7 +27,7 @@ namespace FoDUploader
         [Option("source", Required = true, HelpText = "The ZIP file, or directory to be zipped, for submission to Fortify on Demand.")]
         public string source { get; set; }
 
-        [Option("username", HelpText = "Your portal user name.", MutuallyExclusiveSet = "userauth")]
+        [Option("username", HelpText = "Your portal username.", MutuallyExclusiveSet = "userauth")]
         public string username { get; set; }
 
         [Option("password", HelpText = "Your portal password.", MutuallyExclusiveSet = "userauth")]

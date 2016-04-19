@@ -1,19 +1,16 @@
 # FoDUploader
 .NET Fortify on Demand assessment uploader
 
-*This software is provided as a sample only, and while tested, not intended for production use*
-
-Proxy connections are supported provided they are configured in Internet Explorer.
+Proxy connections are supported automatically provided they are configured in Internet Explorer	on the system.
 
 **Options**
 
 FoD Uploader 1.02
 Copyright (C) 2016 HPE Fortify on Demand, Ryan Black ryan.black@hpe.com
 
-  --source               Required. The ZIP file, or directory to be zipped, for
-                         submission to Fortify on Demand
+  --source               Required. The ZIP file, or directory to be zipped, for submission to Fortify on Demand.
 
-  --username             Your portal tenant account name and username separated by a backslash, e.g. Company\userOne
+  --username             Your portal username.
 
   --password             Your portal password.
 

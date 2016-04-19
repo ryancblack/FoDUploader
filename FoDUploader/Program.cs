@@ -7,6 +7,7 @@ using System.Collections.Specialized;
 using System.Web;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace FoDUploader
 {
@@ -151,6 +152,25 @@ namespace FoDUploader
             Trace.WriteLine(string.Format("Include Third-Party Libraries: {0}", options.includeThirdParty ? "True" : "False"));
             Trace.WriteLine(string.Format("Assessment payload: {0}", "\"" + options.source + "\""));
             Trace.WriteLine(string.Format("Log file: {0}", "\"" + logName + "\""));
+
+            if (options.debug)
+            {
+                StringBuilder extensions = new StringBuilder();
+                var last = supportedExtensions.Last();
+
+                foreach (string s in supportedExtensions)
+                {
+                    if (s.Equals(last))
+                    {
+                        extensions.Append(s);
+                    }
+                    else
+                    {
+                        extensions.Append(s + ", ");
+                    }
+                }
+                Trace.WriteLine(string.Format("Packaged file extensions: {0}", extensions.ToString()));
+            }
         }
 
         /// <summary>

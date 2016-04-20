@@ -8,11 +8,11 @@ namespace FoDUploader.API
 {
     class ReleaseResponse
     {
-        public Data data { get; set; }
+        public Release data { get; set; }
         public int responseCode { get; set; }
 
     }
-    class Data
+    class Release
     {
         //https://hpfod.com/api/v1/Release/{releaseId}
 

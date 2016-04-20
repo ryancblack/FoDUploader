@@ -298,7 +298,6 @@ namespace FoDUploader
             request.AddHeader("Authorization", "Bearer " + accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
-            //TODO add retry on GetReleaseInfo
             try
             {
                var response = client.Execute(request);
@@ -310,6 +309,34 @@ namespace FoDUploader
                 Trace.WriteLine(ex);
                 throw;
             }
+        }
+
+        public TenantEntitlementQuery GetEntitlementInfo()
+        {
+            StringBuilder endpoint = new StringBuilder();
+            endpoint.Append(baseURI.Scheme + "://");
+            endpoint.Append(baseURI.Host + "/");
+            endpoint.Append("api/v2/TenantEntitlements");
+
+            var client = new RestClient(endpoint.ToString());
+            client.Timeout = globaltimeoutinminutes * 120;
+            var request = new RestRequest(Method.GET);
+
+            request.AddHeader("Authorization", "Bearer " + accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            try
+            {
+                var response = client.Execute(request);
+                TenantEntitlementQuery entitlements = new JsonDeserializer().Deserialize<TenantEntitlementQuery>(response);
+                return entitlements;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                throw;
+            }
+
         }
 
         public bool isLoggedIn()

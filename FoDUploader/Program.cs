@@ -8,6 +8,7 @@ using System.Web;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using FoDUploader.API;
 
 namespace FoDUploader
 {
@@ -20,6 +21,7 @@ namespace FoDUploader
         private static string logName = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt");
         private static string technologyStack = "";
         private static string languageLevel = "";
+        private static int assessmentTypeID;
         private static string[] supportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk" };
 
         private static bool isConsole;
@@ -82,7 +84,7 @@ namespace FoDUploader
 
             if (!api.isLoggedIn())
             {
-                if(!api.Authorize())
+                if (!api.Authorize())
                 {
                     Trace.WriteLine("Error authenticating to Fortify on Demand, please check your settings.");
                     Environment.Exit(1);
@@ -102,7 +104,7 @@ namespace FoDUploader
             else
             {
                 Trace.WriteLine(string.Format("Payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb"));
-            }          
+            }
 
             if (mbyteSize > MaxUploadSizeInMB)
             {
@@ -110,15 +112,7 @@ namespace FoDUploader
                 Environment.Exit(1);
             }
 
-            // Ensure a scan is not already running for the application prior to attempting to upload.
-            var releaseInfo = api.GetReleaseInfo();
-
-            if(releaseInfo.data.staticScanStatusId == 1 || releaseInfo.data.staticScanStatusId == 4) // "In Progress" or "Waiting"
-            {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
-                Environment.Exit(1);
-             // Console.ReadKey();
-            }
+            CheckTenantAccountStatus(api);
 
             api.SendScanPost();
 
@@ -129,6 +123,59 @@ namespace FoDUploader
             if (isConsole)
             {
                 Console.ReadKey();
+            }
+        }
+
+        /// <summary>
+        /// Checks the existing application to ensure it's not running, paused, and that the tenant account has the required valid entitlement(s) to submit assessments
+        /// </summary>
+        /// <param name="api"></param>
+        private static void CheckTenantAccountStatus(FoDAPI api)
+        {
+            var releaseInfo = api.GetReleaseInfo();
+            var entitlementInfo = api.GetEntitlementInfo();
+            bool isSubscriptionModel = entitlementInfo.data.entitlementTypeId.Equals(1);
+            List<TenantEntitlement> returnedEntitlements;
+            List<TenantEntitlement> validEntitlements = new List<TenantEntitlement>();
+
+            if (!entitlementInfo.data.tenantEntitlements.Any())
+            {
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager"));
+                Environment.Exit(1);
+            }
+
+            if (!isSubscriptionModel) // for unit-based entitlement we need to check that assesssmentTypeId has entitlement for the ID specified in the BSI URL the user is trying to use
+            {
+                returnedEntitlements = entitlementInfo.data.tenantEntitlements.Where(x => x.assessmentTypeId.Equals(assessmentTypeID)).ToList();
+            }
+            else
+            {
+                returnedEntitlements = entitlementInfo.data.tenantEntitlements.Where(x => x.assessmentTypeId.Equals(0)).ToList();
+            }
+
+            foreach (var entitlementResult in returnedEntitlements)
+            {
+                if (DateTime.Now < entitlementResult.endDate)
+                {
+                    if (entitlementResult.unitsConsumed < entitlementResult.unitsPurchased)
+                    {
+                        validEntitlements.Add(entitlementResult);
+                    }
+                }
+            }
+
+            if (!validEntitlements.Any())
+            {
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements for this submission. Please contact your Technical Account Manager"));
+                Environment.Exit(1);
+            }
+
+            // Ensure a scan is not already running for the application prior to attempting to upload.
+
+            if (releaseInfo.data.staticScanStatusId == 1 || releaseInfo.data.staticScanStatusId == 4) // "In Progress" or "Waiting"
+            {
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
+                Environment.Exit(1);
             }
         }
 
@@ -273,6 +320,7 @@ namespace FoDUploader
             NameValueCollection queryParameters = GetqueryParameters(new UriBuilder(options.uploadURL));
             technologyStack = queryParameters.Get("ts");
             languageLevel = queryParameters.Get("ll");
+            assessmentTypeID = Convert.ToInt32(queryParameters.Get("astid"));
 
             includeAllFiles = options.includeAllPayload;
 

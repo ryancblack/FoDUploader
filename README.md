@@ -41,7 +41,7 @@ Copyright (C) 2016 HPE Fortify on Demand, Ryan Black - ryan.black@hpe.com
   --includeThirdParty    (Default: False) If set to true third-party libraries
                          will be included in assessment results.
 
-  --debug				 (Default: False) API calls and post data will be written to the log and console.
+  --debug				 (Default: False) Verbose setting, API call, POST detail, and entitlement information will be written to the console.
 
   --includeAllFiles	     (Default: False) If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of "false" will greatly reduce the size of the submission with no impact to assessment quality.
 

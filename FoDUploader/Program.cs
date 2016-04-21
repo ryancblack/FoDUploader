@@ -21,6 +21,7 @@ namespace FoDUploader
         private static string logName = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt");
         private static string technologyStack = "";
         private static string languageLevel = "";
+        private static string tenantCode = "";
         private static int assessmentTypeID;
         private static string[] supportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk" };
 
@@ -112,7 +113,7 @@ namespace FoDUploader
                 Environment.Exit(1);
             }
 
-            CheckTenantAccountStatus(api);
+            CheckTenantAccountStatus(api, options);
 
             api.SendScanPost();
 
@@ -130,7 +131,7 @@ namespace FoDUploader
         /// Checks the existing application to ensure it's not running, paused, and that the tenant account has the required valid entitlement(s) to submit assessments
         /// </summary>
         /// <param name="api"></param>
-        private static void CheckTenantAccountStatus(FoDAPI api)
+        private static void CheckTenantAccountStatus(FoDAPI api, Options options)
         {
             var releaseInfo = api.GetReleaseInfo();
             var entitlementInfo = api.GetEntitlementInfo();
@@ -153,7 +154,7 @@ namespace FoDUploader
                 returnedEntitlements = entitlementInfo.data.tenantEntitlements.Where(x => x.assessmentTypeId.Equals(0)).ToList();
             }
 
-            foreach (var entitlementResult in returnedEntitlements)
+            foreach (TenantEntitlement entitlementResult in returnedEntitlements)
             {
                 if (DateTime.Now < entitlementResult.endDate)
                 {
@@ -176,13 +177,31 @@ namespace FoDUploader
             {
                 Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
                 Environment.Exit(1);
+            }   
+            
+            if (options.debug)
+            {
+                Trace.WriteLine(" ");
+                Trace.WriteLine(string.Format("DEBUG: Valid entitlements for: \"{0}\" ", tenantCode));
+                foreach (TenantEntitlement entitlement in validEntitlements)
+                {
+                    Trace.WriteLine("Entitlement ID: " + entitlement.entitlementId.ToString());
+                    Trace.WriteLine("Valid For Assesment Type: " + ((entitlement.assessmentTypeId.Equals(0)) ? "Any" : entitlement.assessmentTypeId.ToString()));
+                    Trace.WriteLine("Start Date ID: " + entitlement.startDate.ToShortDateString());
+                    Trace.WriteLine("End Date ID: " + entitlement.endDate.ToShortDateString());
+                    Trace.WriteLine("Units Purchased: " + entitlement.unitsPurchased.ToString());
+                    Trace.WriteLine("Units Consumed: " + entitlement.unitsConsumed.ToString());
+                    Trace.WriteLine(" ");
+                }
             }
+
+            Console.WriteLine("");     
         }
 
         private static void PrintOptions(Options options)
         {
 
-            Trace.WriteLine("Fortify on Demand Uploader" + Environment.NewLine);
+            Trace.WriteLine("Fortify on Demand Uploader 1.03" + Environment.NewLine);
             Trace.WriteLine("Selected options: ");
             if (isTokenAuth)
             {
@@ -320,6 +339,7 @@ namespace FoDUploader
             NameValueCollection queryParameters = GetqueryParameters(new UriBuilder(options.uploadURL));
             technologyStack = queryParameters.Get("ts");
             languageLevel = queryParameters.Get("ll");
+            tenantCode = queryParameters.Get("tc");
             assessmentTypeID = Convert.ToInt32(queryParameters.Get("astid"));
 
             includeAllFiles = options.includeAllPayload;

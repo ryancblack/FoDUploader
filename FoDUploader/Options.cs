@@ -57,7 +57,7 @@ namespace FoDUploader
         [Option("includeAllFiles", DefaultValue = false, HelpText = "If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
         public bool includeAllPayload { get; set; }
 
-        [Option("debug", DefaultValue = false, HelpText = "API calls and post data will be written to the log and console.")]
+        [Option("debug", DefaultValue = false, HelpText = "Verbose setting, API call, POST detail, and entitlement information will be written to the console.")]
         public bool debug { get; set; }
     }
 }

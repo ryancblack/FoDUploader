@@ -167,7 +167,7 @@ namespace FoDUploader
 
             if (!validEntitlements.Any())
             {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements for this submission. Please contact your Technical Account Manager"));
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements for this submission type. Please contact your Technical Account Manager"));
                 Environment.Exit(1);
             }
 

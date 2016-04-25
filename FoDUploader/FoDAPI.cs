@@ -99,7 +99,6 @@ namespace FoDUploader
                 }
                 if (isDebug)
                 {
-                    Trace.WriteLine(string.Format("Error {0}: POST Request: {1}",attempts,response.Request));
                     Trace.WriteLine("Error: POST Response: " + response.Content.ToString());
                 }
                 if (attempts >= maxretries)

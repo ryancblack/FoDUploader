@@ -253,7 +253,7 @@ namespace FoDUploader
                 catch (Exception ex)
                 {
                     accessToken = null;
-                    Trace.WriteLine(string.Format("Error count {0} retriving API access token", attempts));
+                    Trace.WriteLine(string.Format("Error count {0} retrieving API access token", attempts));
                 }
             }
             while (attempts <= maxretries);

@@ -1,9 +1,7 @@
 # FoDUploader
-This is a .NET Fortify on Demand assessment uploader with several convenience features.
+This project is a MIT-licensed .NET Fortify on Demand assessment uploader with several convenience features.
 
-Why use this over, or migrate to this from, the existing Java tool?
-
-* Not Java; the only dependency is .NET 4.5+
+* The only dependency is .NET 4.5+
 * Checks that an assessment for the target application is not in progress/paused before attempting to upload; correct entitlement is also validated
 * Package a folder as a ZIP, or use an existing ZIP, determined by --source
 * Logging, status and errors are written to a log in temp - useful for "headless" instances like with TFS post-build actions or troubleshooting

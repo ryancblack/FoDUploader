@@ -12,7 +12,7 @@ Proxy connections are supported automatically provided they are configured in In
 **Options**
 
 FoD Uploader 1.03
-Copyright (C) 2016 HPE Fortify on Demand, Ryan Black - ryan.black@hpe.com
+Copyright (C) 2016 Ryan Black
 
   --source               Required. The ZIP file, or directory to be zipped, for submission to Fortify on Demand.
 

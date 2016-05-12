@@ -76,7 +76,11 @@ namespace FoDUploader
 
             request.AddQueryParameter("assessmentTypeId", queryParameters.Get("astid"));
             request.AddQueryParameter("technologyStack", queryParameters.Get("ts"));
-            request.AddQueryParameter("languageLevel", queryParameters.Get("ll"));
+
+            if (queryParameters.Get("ts").Equals("JAVA/J2EE") || queryParameters.Get("ts").Equals(".NET") || queryParameters.Get("ts").Equals("PYTHON"))
+            {
+                request.AddQueryParameter("languageLevel", queryParameters.Get("ll"));
+            }
 
             // add optional assessment parameters for sonatype, automated audit, express scanning
 

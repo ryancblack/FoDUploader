@@ -102,7 +102,7 @@ namespace FoDUploader
                 if (!api.Authorize())
                 {
                     Trace.WriteLine("Error authenticating to Fortify on Demand, please check your settings.");
-                    Environment.Exit(1);
+                    Environment.Exit(-1);
                 }
 
                 Trace.WriteLine("Successfully authenticated to Fortify on Demand.");
@@ -124,7 +124,7 @@ namespace FoDUploader
             if (mbyteSize > MaxUploadSizeInMB)
             {
                 Trace.WriteLine(string.Format("Assessment payload size exceeds {0} Mb, cannot continue.", MaxUploadSizeInMB));
-                Environment.Exit(1);
+                Environment.Exit(-1);
             }
 
             CheckTenantAccountStatus(api, options);
@@ -142,21 +142,28 @@ namespace FoDUploader
         }
 
         /// <summary>
-        /// Checks the existing application to ensure it's not running, paused, and that the tenant account has the required valid entitlement(s) to submit assessments
+        /// Checks the existing application to ensure it's not running, paused, or a retired release and that the tenant account has the required valid entitlement(s) to submit assessments
         /// </summary>
         /// <param name="api"></param>
         private static void CheckTenantAccountStatus(FoDAPI api, Options options)
         {
             var releaseInfo = api.GetReleaseInfo();
             var entitlementInfo = api.GetEntitlementInfo();
+            bool isRetired = releaseInfo.data.releaseSDLCStatusId.Equals(4) ? true : false;
             bool isSubscriptionModel = entitlementInfo.data.entitlementTypeId.Equals(1);
             List<TenantEntitlement> returnedEntitlements;
             List<TenantEntitlement> validEntitlements = new List<TenantEntitlement>();
 
+            if (isRetired) // cannot submit to this release as it is retired in the portal
+            {
+                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create an assessment for \"{0} - {1}\" as this release is retired.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
+                Environment.Exit(-1);
+            }
+
             if (!entitlementInfo.data.tenantEntitlements.Any())
             {
                 Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager"));
-                Environment.Exit(1);
+                Environment.Exit(-1);
             }
 
             if (!isSubscriptionModel) // for unit-based entitlement we need to check that assesssmentTypeId has entitlement for the ID specified in the BSI URL the user is trying to use

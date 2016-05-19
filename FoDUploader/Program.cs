@@ -72,6 +72,7 @@ namespace FoDUploader
                 else
                 {
                     Trace.WriteLine(options.GetUsage());
+                    Environment.Exit(-1);
                 }
             }
             catch (Exception ex)
@@ -81,7 +82,10 @@ namespace FoDUploader
                 {
                     Console.ReadKey();
                 }
+                Environment.Exit(-1);
             }
+            
+            Environment.Exit(0);
         }
 
         public static void Run(Options options)

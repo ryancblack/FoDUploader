@@ -9,15 +9,15 @@
 #endregion 
 
 
-namespace FoDUploader
+namespace FoDUploader.API
 {
     class AuthorizationResponse
     {
-        public string accessToken { get; set; }
-        public string tokenType { get; set; }
-        public int expiresInSeconds { get; set; }
-        public string refreshToken { get; set; }
-        public string scope { get; set; }
+        public string AccessToken { get; set; }
+        public string TokenType { get; set; }
+        public int ExpiresInSeconds { get; set; }
+        public string RefreshToken { get; set; }
+        public string Scope { get; set; }
 
     }
 }

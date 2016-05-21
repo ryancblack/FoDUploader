@@ -6,62 +6,62 @@
 //The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#endregion 
+#endregion
 
 using System;
+using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
+using System.Web;
+using FoDUploader.API;
 using RestSharp;
 using RestSharp.Deserializers;
-using System.Web;
-using System.Collections.Specialized;
-using System.IO;
-using FoDUploader.API;
-using System.Diagnostics;
 
 namespace FoDUploader
 {
-    class FoDAPI
+    class FoDapi
     {
-        private string apiToken;
-        private string apiSecret;
-        private string userName;
-        private string password;
-        private string submissionZIP;
+        private readonly string _apiToken;
+        private readonly string _apiSecret;
+        private readonly string _userName;
+        private readonly string _password;
+        private readonly string _submissionZip;
 
-        private bool doOpensourceReport;
-        private bool doExpressScan;
-        private bool doAutomatedAudit;
-        private bool includeThirdParty;
+        private readonly bool _doExpressScan;
+        private readonly bool _doAutomatedAudit;
+        private readonly bool _includeThirdParty;
 
-        private bool isTokenAuth;
-        private bool isDebug;
+        private readonly bool _isTokenAuth;
+        private readonly bool _isDebug;
 
-        private string accessToken;
+        private string _accessToken;
 
-        private UriBuilder baseURI;
-        private NameValueCollection queryParameters;
-
-
-        private const long seglen = (1024 * 1024) * 10;  // 10Mb chunk size
-        private const int globaltimeoutinminutes = 1 * 60000;
-        private const int maxretries = 5;
+        private readonly UriBuilder _baseUri;
+        private readonly NameValueCollection _queryParameters;
 
 
-        public FoDAPI(Options options, string submissionZIP)
+        private const long Seglen = (1024 * 1024) * 10;  // 10Mb chunk size
+        private const int Globaltimeoutinminutes = 1 * 60000;
+        private const int Maxretries = 5;
+
+        public bool DoOpensourceReport { get; }
+
+        public FoDapi(Options options, string zip)
         {
-            this.baseURI = new UriBuilder(options.uploadURL);
-            this.queryParameters = GetqueryParameters(this.baseURI);
-            this.isTokenAuth = (string.IsNullOrWhiteSpace(options.username)) ? true : false;
-            this.submissionZIP = submissionZIP;
-            this.apiToken = options.apiToken;
-            this.apiSecret = options.apiTokenSecret;
-            this.userName = options.username;
-            this.password = options.password;
-            this.doAutomatedAudit = options.automatedAudit;
-            this.doOpensourceReport = options.opensourceReport;
-            this.doExpressScan = options.expressScan;
-            this.includeThirdParty = options.includeThirdParty;
-            this.isDebug = options.debug;
+            _baseUri = new UriBuilder(options.UploadUrl);
+            _queryParameters = GetqueryParameters(_baseUri);
+            _isTokenAuth = (string.IsNullOrWhiteSpace(options.Username));
+            _submissionZip = zip;
+            _apiToken = options.ApiToken;
+            _apiSecret = options.ApiTokenSecret;
+            _userName = options.Username;
+            _password = options.Password;
+            _doAutomatedAudit = options.AutomatedAudit;
+            DoOpensourceReport = options.OpensourceReport;
+            _doExpressScan = options.ExpressScan;
+            _includeThirdParty = options.IncludeThirdParty;
+            _isDebug = options.Debug;
         }
 
         private IRestResponse SendData(RestClient client, byte[] data, long fragNo, long offset)
@@ -69,17 +69,17 @@ namespace FoDUploader
 
             var request = new RestRequest(Method.POST);
 
-            request.AddHeader("Authorization", "Bearer " + accessToken);
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
             // add tenant/scan parameters
 
-            request.AddQueryParameter("assessmentTypeId", queryParameters.Get("astid"));
-            request.AddQueryParameter("technologyStack", queryParameters.Get("ts"));
+            request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
+            request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
 
-            if (queryParameters.Get("ts").Equals("JAVA/J2EE") || queryParameters.Get("ts").Equals(".NET") || queryParameters.Get("ts").Equals("PYTHON"))
+            if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
             {
-                request.AddQueryParameter("languageLevel", queryParameters.Get("ll"));
+                request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
             }
 
             // add optional assessment parameters for sonatype, automated audit, express scanning
@@ -90,15 +90,15 @@ namespace FoDUploader
             request.AddQueryParameter("offset", offset.ToString());
             request.AddParameter("application/octet-stream", data, ParameterType.RequestBody);
 
-            var postURI = client.BuildUri(request).AbsoluteUri;
+            var postUri = client.BuildUri(request).AbsoluteUri;
 
-            if (isDebug)
+            if (_isDebug)
             {
-                Trace.WriteLine(string.Format("DEBUG: POST string: {0}", postURI));
+                Trace.WriteLine($"DEBUG: POST string: {postUri}");
             }
 
             int attempts = 0;
-            string httpStatus = "";
+            string httpStatus;
             IRestResponse response;
 
             do
@@ -110,71 +110,68 @@ namespace FoDUploader
                 {
                     break;
                 }
-                if (isDebug)
+                if (_isDebug)
                 {
-                    Trace.WriteLine("Error: POST Response: " + response.Content.ToString());
+                    Trace.WriteLine("Error: POST Response: " + response.Content);
                 }
-                if (attempts >= maxretries)
+                if (attempts >= Maxretries)
                 {
                     Trace.WriteLine("Error: Maximum POST attempts reached, please check your connection and try again later.");
                     break;
                 }
             }
 
-            while (httpStatus != "OK" || attempts < maxretries);
+            while (httpStatus != "OK" || attempts < Maxretries);
 
             return response;
         }
 
         public void SendScanPost()
         {
-            FileInfo fi = new FileInfo(submissionZIP);
+            FileInfo fi = new FileInfo(_submissionZip);
 
             Trace.WriteLine("Beginning upload....");
             // endpoint https://www.hpfod.com/api/v1/Release/{releaseId}/scan/
             // parameters ?assessmentTypeId=&technologyStack=&languageLevel=&fragNo=&offset=&
 
             StringBuilder endpoint = new StringBuilder();
-            endpoint.Append(baseURI.Scheme + "://");
-            endpoint.Append(baseURI.Host + "/");
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
             endpoint.Append("api/v1/Release/");
-            endpoint.Append(queryParameters.Get("pv"));
+            endpoint.Append(_queryParameters.Get("pv"));
             endpoint.Append("/scan/");
 
-            var client = new RestClient(endpoint.ToString());
-            client.Timeout = globaltimeoutinminutes * 120;
+            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
 
             // Read it in chunks
             string uploadStatus = "";           
 
-            using (FileStream fs = new FileStream(submissionZIP, FileMode.Open))
+            using (FileStream fs = new FileStream(_submissionZip, FileMode.Open))
             {
-                byte[] readByteBuffer = new byte[seglen];
-                byte[] sendByteBuffer;
+                byte[] readByteBuffer = new byte[Seglen];
 
                 int fragmentNumber = 0;
                 int offset = 0;
-                int bytesRead = 0;
                 double bytesSent = 0;
                 double fileSize = fi.Length;
-                long chunkSize = seglen;
+                long chunkSize = Seglen;
 
                 try
                 {
+                    int bytesRead;
                     while ((bytesRead = fs.Read(readByteBuffer, 0, (int)chunkSize)) > 0)
                     {
-                        decimal uploadProgress = Math.Round(((decimal)bytesSent / (decimal)fileSize) * 100.0M);
+                        var uploadProgress = Math.Round(((decimal)bytesSent / (decimal)fileSize) * 100.0M);
 
-                        sendByteBuffer = new byte[chunkSize];
+                        var sendByteBuffer = new byte[chunkSize];
 
-                        if (bytesRead < seglen)
+                        if (bytesRead < Seglen)
                         {
                             fragmentNumber = -1;
-                            Array.Resize<byte>(ref sendByteBuffer, bytesRead);
+                            Array.Resize(ref sendByteBuffer, bytesRead);
                             Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
                             var lastPost = SendData(client, sendByteBuffer, fragmentNumber, offset);
                             uploadStatus = lastPost.StatusCode.ToString();
-                            bytesSent += bytesRead;
                             break;
                         }
                         Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
@@ -183,7 +180,7 @@ namespace FoDUploader
                         offset += bytesRead;
                         bytesSent += bytesRead;
 
-                        if ((fs.Length - offset) < seglen)
+                        if ((fs.Length - offset) < Seglen)
                         {
                             chunkSize = (fs.Length - offset);
                         }
@@ -197,10 +194,8 @@ namespace FoDUploader
                 }
                 finally
                 {
-                    if (fs != null)
-                    {
-                        fs.Close();
-                    }
+                    // ReSharper disable once ConstantConditionalAccessQualifier
+                    fs?.Close();
                 }
 
                 if (uploadStatus == "OK")
@@ -209,7 +204,9 @@ namespace FoDUploader
                 }
                 else
                 {
+                    Trace.WriteLine("Status: " + uploadStatus);
                     Trace.WriteLine("Error submitting to Fortify on Demand.");
+                    Environment.Exit(-1);
                 }
             }
         }
@@ -221,9 +218,9 @@ namespace FoDUploader
         public bool Authorize()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(baseURI.Scheme);
+            sb.Append(_baseUri.Scheme);
             sb.Append("://");
-            sb.Append(baseURI.Host + "/");
+            sb.Append(_baseUri.Host + "/");
             sb.Append("oauth/token");
 
             var client = new RestClient(sb.ToString());
@@ -231,17 +228,17 @@ namespace FoDUploader
 
             request.AddParameter("scope", "https://hpfod.com/tenant");
 
-            if (isTokenAuth)
+            if (_isTokenAuth)
             {
                 request.AddParameter("grant_type", "client_credentials");
-                request.AddParameter("client_id", apiToken);
-                request.AddParameter("client_secret", apiSecret);
+                request.AddParameter("client_id", _apiToken);
+                request.AddParameter("client_secret", _apiSecret);
             }
             else
             {
                 request.AddParameter("grant_type", "password");
-                request.AddParameter("username", queryParameters.Get("tc") + @"\" + userName);
-                request.AddParameter("password", password);
+                request.AddParameter("username", _queryParameters.Get("tc") + @"\" + _userName);
+                request.AddParameter("password", _password);
             }
 
             int attempts = 0;
@@ -252,47 +249,47 @@ namespace FoDUploader
                 {
                     attempts++;
                     var response = client.Execute(request);
-                    accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+                    _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
 
-                    if (!string.IsNullOrEmpty(accessToken))
+                    if (!string.IsNullOrEmpty(_accessToken))
                     {
-                        if (isDebug)
+                        if (_isDebug)
                         {
-                            Trace.WriteLine(string.Format("DEBUG: Authentication Token: {0}", accessToken));
+                            Trace.WriteLine($"DEBUG: Authentication Token: {_accessToken}");
                         }
                         return true;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    accessToken = null;
-                    Trace.WriteLine(string.Format("Error count {0} retrieving API access token", attempts));
+                    _accessToken = null;
+                    Trace.WriteLine($"Error count {attempts} retrieving API access token");
                 }
             }
-            while (attempts <= maxretries);
+            while (attempts <= Maxretries);
 
             return false;
         }
 
         private RestRequest AddOptionalParameters(RestRequest request)
         {
-            if (doOpensourceReport)
+            if (DoOpensourceReport)
             {
                 request.AddQueryParameter("doSonatypeScan", "true");
             }
-            if (doAutomatedAudit)
+            if (_doAutomatedAudit)
             {
                 request.AddQueryParameter("auditPreferenceId", "2");
             }
-            if (doExpressScan)
+            if (_doExpressScan)
             {
                 request.AddQueryParameter("scanPreferenceId", "2");
             }
-            if (includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
+            if (_includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
             {
                 request.AddQueryParameter("excludeThirdPartyLibs", "false");
             }
-            if (!includeThirdParty)
+            if (!_includeThirdParty)
             {
                 request.AddQueryParameter("excludeThirdPartyLibs", "true");
             }
@@ -303,16 +300,15 @@ namespace FoDUploader
         {
 
             StringBuilder endpoint = new StringBuilder();
-            endpoint.Append(baseURI.Scheme + "://");
-            endpoint.Append(baseURI.Host + "/");
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
             endpoint.Append("api/v1/Release/");
-            endpoint.Append(queryParameters.Get("pv"));
+            endpoint.Append(_queryParameters.Get("pv"));
 
-            var client = new RestClient(endpoint.ToString());
-            client.Timeout = globaltimeoutinminutes * 120;
+            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
             var request = new RestRequest(Method.GET);
 
-            request.AddHeader("Authorization", "Bearer " + accessToken);
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
             try
@@ -330,21 +326,24 @@ namespace FoDUploader
 
         public TenantEntitlementQuery GetEntitlementInfo()
         {
-            StringBuilder endpoint = new StringBuilder();
-            endpoint.Append(baseURI.Scheme + "://");
-            endpoint.Append(baseURI.Host + "/");
+            var endpoint = new StringBuilder();
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
             endpoint.Append("api/v2/TenantEntitlements");
 
-            var client = new RestClient(endpoint.ToString());
-            client.Timeout = globaltimeoutinminutes * 120;
+            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
             var request = new RestRequest(Method.GET);
 
-            request.AddHeader("Authorization", "Bearer " + accessToken);
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
             try
             {
                 var response = client.Execute(request);
+                if (response.StatusDescription.Equals("Unauthorized"))
+                {
+                    Trace.WriteLine("Note: Your token is not authorized to retrieve entitlement info. Please use higher privilege authentication if you would like this information in this utility.");
+                }
                 TenantEntitlementQuery entitlements = new JsonDeserializer().Deserialize<TenantEntitlementQuery>(response);
                 return entitlements;
             }
@@ -356,9 +355,9 @@ namespace FoDUploader
 
         }
 
-        public bool isLoggedIn()
+        public bool IsLoggedIn()
         {
-            if (string.IsNullOrWhiteSpace(accessToken))
+            if (string.IsNullOrWhiteSpace(_accessToken))
             {
                 return false;
             }
@@ -369,32 +368,32 @@ namespace FoDUploader
         public void RetireToken()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(baseURI.Scheme);
+            sb.Append(_baseUri.Scheme);
             sb.Append("://");
-            sb.Append(baseURI.Host + "/");
+            sb.Append(_baseUri.Host + "/");
             sb.Append("oauth/retireToken");
 
             var client = new RestClient(sb.ToString());
             var request = new RestRequest("", Method.GET);
 
-            request.AddHeader("Auhorization", "Bearer " + accessToken);
+            request.AddHeader("Auhorization", "Bearer " + _accessToken);
 
             try
             {
                 var response = client.Execute(request);
-                accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).accessToken;
+                _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
             }
             catch (Exception ex)
             {
-                accessToken = null;
+                _accessToken = null;
                 Trace.WriteLine(ex.Message);
                 throw;
             }
         }
 
-        private NameValueCollection GetqueryParameters(UriBuilder postURL)
+        private NameValueCollection GetqueryParameters(UriBuilder postUrl)
         {
-            NameValueCollection queryParameters = HttpUtility.ParseQueryString(postURL.Query);
+            NameValueCollection queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
             return queryParameters;
         }
     }

@@ -6,48 +6,51 @@
 //The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#endregion 
+#endregion
 
 using System;
-using System.IO;
-using CommandLine;
-using Ionic.Zip;
-using System.Diagnostics;
-using System.Collections.Specialized;
-using System.Web;
-using System.Linq;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Web;
+using CommandLine;
 using FoDUploader.API;
+using Ionic.Zip;
 
 namespace FoDUploader
 {
-    class Program
+    internal class Program
     {
-        private static bool isTokenAuth = true;
-        private static bool includeAllFiles = false;
-        private const long MaxUploadSizeInMB = 5000;
-        private static string outputName = "fodupload-" + Guid.NewGuid().ToString(); //for the ZIP and log file names
-        private static string logName = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName + "-log.txt");
-        private static string technologyStack = "";
-        private static string languageLevel = "";
-        private static string tenantCode = "";
-        private static int assessmentTypeID;
-        private static string[] supportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk", ".swift" };
+        private static bool _isTokenAuth = true;
+        private static bool _includeAllFiles;
+        private const long MaxUploadSizeInMb = 5000;
+        private static readonly string OutputName = "fodupload-" + Guid.NewGuid(); //for the ZIP and log file names
+        private static readonly string LogName = Path.Combine(Path.GetTempPath(), OutputName + "-log.txt");
+        private static string _technologyStack = "";
+        private static string _languageLevel = "";
+        private static string _tenantCode = "";
+        private static int _assessmentTypeId;
+        private static readonly string[] SupportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk", ".swift" };
 
-        private static bool isConsole;
+        private static bool _isConsole;
 
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             try
             {
                 Trace.Listeners.Clear();
-                TextWriterTraceListener twtl = new TextWriterTraceListener(logName);
-                twtl.Name = "Logger";
-                twtl.TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime;
-                ConsoleTraceListener ctl = new ConsoleTraceListener(false);
-                ctl.TraceOutputOptions = TraceOptions.DateTime;
+
+                var twtl = new TextWriterTraceListener(LogName)
+                {
+                    Name = "Logger",
+                    TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime
+                };
+
+                var ctl = new ConsoleTraceListener(false) {TraceOutputOptions = TraceOptions.DateTime};
 
                 Trace.Listeners.Add(twtl);
                 Trace.Listeners.Add(ctl);
@@ -78,7 +81,7 @@ namespace FoDUploader
             catch (Exception ex)
             {
                 Trace.WriteLine(ex.Message);
-                if(isConsole)
+                if(_isConsole)
                 {
                     Console.ReadKey();
                 }
@@ -93,11 +96,11 @@ namespace FoDUploader
             SetAdditionalOptions(options);
             PrintOptions(options);
 
-            string zipPath = ZipFolder(options.source);
+            var zipPath = ZipFolder(options.Source);
 
-            FoDAPI api = new FoDAPI(options, zipPath);
+            var api = new FoDapi(options, zipPath);
 
-            if (!api.isLoggedIn())
+            if (!api.IsLoggedIn())
             {
                 if (!api.Authorize())
                 {
@@ -108,156 +111,182 @@ namespace FoDUploader
                 Trace.WriteLine("Successfully authenticated to Fortify on Demand.");
             }
 
-            FileInfo fi = new FileInfo(zipPath);
+            var fi = new FileInfo(zipPath);
+
             double mbyteSize = (fi.Length / 1024f) / 1024f;
             double kbyteSize = (fi.Length / 1024f);
 
-            if (fi.Length < (1024f * 1024f))
-            {
-                Trace.WriteLine(string.Format("Payload prepared size: {0}{1}", Math.Round(kbyteSize, 2), " kb"));
-            }
-            else
-            {
-                Trace.WriteLine(string.Format("Payload prepared size: {0}{1}", Math.Round(mbyteSize, 2), " Mb"));
-            }
+            Trace.WriteLine(fi.Length < (1024f*1024f)
+                ? $"Payload prepared size: {Math.Round(kbyteSize, 2)} kb"
+                : $"Payload prepared size: {Math.Round(mbyteSize, 2)} Mb");
 
-            if (mbyteSize > MaxUploadSizeInMB)
+            if (mbyteSize > MaxUploadSizeInMb)
             {
-                Trace.WriteLine(string.Format("Assessment payload size exceeds {0} Mb, cannot continue.", MaxUploadSizeInMB));
+                Trace.WriteLine($"Assessment payload size exceeds {MaxUploadSizeInMb} Mb, cannot continue.");
                 Environment.Exit(-1);
             }
 
-            CheckTenantAccountStatus(api, options);
+            /*
+             * 
+            API tokens with "start scans" only privileges cannot access entitlement information, we'll have to rely on the API response error from attempting to post to know if we can submit an assessment
+
+            - First, determine if the provided authentication information can see entitlement info and, if so, check it, if not continue and rely on the API response
+            - Second, determine if the release is retired, in progress, or paused - any of these would prevent another submission
+
+            The reason for all this is to save a potentially-significant amount of time waiting on an upload, if possible, only to find by the response that we cannot proceed or that there was simply "an error" - normally caused by one of these testable conditions.
+
+            */
+
+            CheckReleaseStatus(api, options);
+
+            CheckEntitlementStatus(api, options);
 
             api.SendScanPost();
 
             // always retire the token
+
             api.RetireToken();
 
-            // hold console open
-            if (isConsole)
+            // hold console open - ask around if this is something we want to do for interactive runs? Feedback has been conflicting regarding this behavior.
+
+            if (_isConsole)
             {
                 Console.ReadKey();
             }
         }
 
         /// <summary>
-        /// Checks the existing application to ensure it's not running, paused, or a retired release and that the tenant account has the required valid entitlement(s) to submit assessments
+        ///  Checks the release to determine if it's retired, in progress, or paused
         /// </summary>
         /// <param name="api"></param>
-        private static void CheckTenantAccountStatus(FoDAPI api, Options options)
+        /// <param name="options"></param>
+        private static void CheckReleaseStatus(FoDapi api, Options options)
         {
             var releaseInfo = api.GetReleaseInfo();
-            var entitlementInfo = api.GetEntitlementInfo();
-            bool isRetired = releaseInfo.data.releaseSDLCStatusId.Equals(4) ? true : false;
-            bool isSubscriptionModel = entitlementInfo.data.entitlementTypeId.Equals(1);
-            List<TenantEntitlement> returnedEntitlements;
-            List<TenantEntitlement> validEntitlements = new List<TenantEntitlement>();
+            var isRetired = releaseInfo.Data.StaticScanStatusId.Equals(0);
 
             if (isRetired) // cannot submit to this release as it is retired in the portal
             {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create an assessment for \"{0} - {1}\" as this release is retired.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
+                Trace.WriteLine($"Error submitting to Fortify on Demand: You cannot create an assessment for \"{releaseInfo.Data.ApplicationName} - {releaseInfo.Data.ReleaseName}\" as this release is retired.");
                 Environment.Exit(-1);
-            }
-
-            if (!entitlementInfo.data.tenantEntitlements.Any())
-            {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager"));
-                Environment.Exit(-1);
-            }
-
-            if (!isSubscriptionModel) // for unit-based entitlement we need to check that assesssmentTypeId has entitlement for the ID specified in the BSI URL the user is trying to use
-            {
-                returnedEntitlements = entitlementInfo.data.tenantEntitlements.Where(x => x.assessmentTypeId.Equals(assessmentTypeID)).ToList();
-            }
-            else
-            {
-                returnedEntitlements = entitlementInfo.data.tenantEntitlements.Where(x => x.assessmentTypeId.Equals(0)).ToList();
-            }
-
-            foreach (TenantEntitlement entitlementResult in returnedEntitlements)
-            {
-                if (DateTime.Now < entitlementResult.endDate)
-                {
-                    if (entitlementResult.unitsConsumed < entitlementResult.unitsPurchased)
-                    {
-                        validEntitlements.Add(entitlementResult);
-                    }
-                }
-            }
-
-            if (!validEntitlements.Any())
-            {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You have no valid assessment entitlements for this submission type. Please contact your Technical Account Manager"));
-                Environment.Exit(1);
             }
 
             // Ensure a scan is not already running for the application prior to attempting to upload.
 
-            if (releaseInfo.data.staticScanStatusId == 1 || releaseInfo.data.staticScanStatusId == 4) // "In Progress" or "Waiting"
+            if (releaseInfo.Data.StaticScanStatusId == 1 || releaseInfo.Data.StaticScanStatusId == 4) // "In Progress" or "Waiting"
             {
-                Trace.WriteLine(string.Format("Error submitting to Fortify on Demand: You cannot create another scan for \"{0} - {1}\" at this time.", releaseInfo.data.applicationName, releaseInfo.data.releaseName));
-                Environment.Exit(1);
-            }   
-            
-            if (options.debug)
+                Trace.WriteLine($"Error submitting to Fortify on Demand: You cannot create another scan for \"{releaseInfo.Data.ApplicationName} - {releaseInfo.Data.ReleaseName}\" at this time.");
+                Environment.Exit(-1);
+            }
+        }
+
+        /// <summary>
+        ///  Checks the entitlement status of the tenant account. If entitlement information cannot be read it will log this and allow a scan upload attempt to continue. 
+        ///  "Start scan" API tokens cannot read entitlement information
+        /// </summary>
+        /// <param name="api"></param>
+        /// <param name="options"></param>
+        private static void CheckEntitlementStatus(FoDapi api, Options options)
+        {
+            var entitlementInfo = api.GetEntitlementInfo();
+
+            if (entitlementInfo.Data != null) // will be null if we're unable to read this with an under-privileged token, in this case it'll be logged in the call
             {
-                Trace.WriteLine(" ");
-                Trace.WriteLine(string.Format("DEBUG: Valid entitlements for: \"{0}\" ", tenantCode));
-                foreach (TenantEntitlement entitlement in validEntitlements)
+                bool isSubscriptionModel = entitlementInfo.Data.EntitlementTypeId.Equals(1);
+                List<TenantEntitlement> returnedEntitlements;
+                List<TenantEntitlement> validEntitlements = new List<TenantEntitlement>();
+
+                if (!entitlementInfo.Data.TenantEntitlements.Any())
                 {
-                    Trace.WriteLine("Entitlement ID: " + entitlement.entitlementId.ToString());
-                    Trace.WriteLine("Valid For Assesment Type: " + ((entitlement.assessmentTypeId.Equals(0)) ? "Any" : entitlement.assessmentTypeId.ToString()));
-                    Trace.WriteLine("Start Date ID: " + entitlement.startDate.ToShortDateString());
-                    Trace.WriteLine("End Date ID: " + entitlement.endDate.ToShortDateString());
-                    Trace.WriteLine("Units Purchased: " + entitlement.unitsPurchased.ToString());
-                    Trace.WriteLine("Units Consumed: " + entitlement.unitsConsumed.ToString());
-                    Trace.WriteLine(" ");
+                    Trace.WriteLine("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager");
+                    Environment.Exit(-1);
                 }
+
+                // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+                if (!isSubscriptionModel) // for unit-based entitlement we need to check that assesssmentTypeId has entitlement for the ID specified in the BSI URL the user is trying to use
+                {
+                    returnedEntitlements = entitlementInfo.Data.TenantEntitlements.Where(x => x.AssessmentTypeId.Equals(_assessmentTypeId)).ToList();
+                }
+                else
+                {
+                    returnedEntitlements = entitlementInfo.Data.TenantEntitlements.Where(x => x.AssessmentTypeId.Equals(0)).ToList();
+                }
+
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var entitlementResult in returnedEntitlements)
+                {
+                    if (DateTime.Now >= entitlementResult.EndDate) continue;
+                    if (entitlementResult.UnitsConsumed < entitlementResult.UnitsPurchased)
+                    {
+                        validEntitlements.Add(entitlementResult);
+                    }
+                }
+
+                if (!validEntitlements.Any())
+                {
+                    Trace.WriteLine("Error submitting to Fortify on Demand: You have no valid assessment entitlements for this submission type. Please contact your Technical Account Manager");
+                    Environment.Exit(-1);
+                }
+
+                if (options.Debug)
+                {
+                    Trace.WriteLine(" ");
+                    Trace.WriteLine($"DEBUG: Valid entitlements for: \"{_tenantCode}\" ");
+                    foreach (var entitlement in validEntitlements)
+                    {
+                        Trace.WriteLine("Entitlement ID: " + entitlement.EntitlementId);
+                        Trace.WriteLine("Valid For Assesment Type: " + ((entitlement.AssessmentTypeId.Equals(0)) ? "Any" : entitlement.AssessmentTypeId.ToString()));
+                        Trace.WriteLine("Start Date ID: " + entitlement.StartDate.ToShortDateString());
+                        Trace.WriteLine("End Date ID: " + entitlement.EndDate.ToShortDateString());
+                        Trace.WriteLine("Units Purchased: " + entitlement.UnitsPurchased);
+                        Trace.WriteLine("Units Consumed: " + entitlement.UnitsConsumed);
+                        Trace.WriteLine(" ");
+                    }
+                }
+
+                Console.WriteLine("");
             }
 
-            Console.WriteLine("");     
         }
 
         private static void PrintOptions(Options options)
         {
 
-            Trace.WriteLine(options.appName + Environment.NewLine);
+            Trace.WriteLine(options.AppName + Environment.NewLine);
             Trace.WriteLine("Selected options: ");
-            if (isTokenAuth)
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (_isTokenAuth)
             {
-                Trace.WriteLine(string.Format("Using token-based authentication, token: {0}", options.apiToken));
+                Trace.WriteLine($"Using token-based authentication, token: {options.ApiToken}");
             }
             else
             {
                 Trace.WriteLine("Using user-based authentication.");
             }
-            Trace.WriteLine(string.Format("Language Setting: {0} {1}", technologyStack, languageLevel));
-            Trace.WriteLine(string.Format("Automated Audit: {0}", options.automatedAudit ? "Requested" : "Not Requested"));
-            Trace.WriteLine(string.Format("Express Scan: {0}", options.expressScan ? "Requested" : "Not Requested"));
-            Trace.WriteLine(string.Format("Open-source Report: {0}", options.opensourceReport ? "Requested" : "Not Requested"));
-            Trace.WriteLine(string.Format("Include Third-Party Libraries: {0}", options.includeThirdParty ? "True" : "False"));
-            Trace.WriteLine(string.Format("Assessment payload: {0}", "\"" + options.source + "\""));
-            Trace.WriteLine(string.Format("Log file: {0}", "\"" + logName + "\""));
+            Trace.WriteLine($"Language Setting: {_technologyStack} {_languageLevel}");
+            Trace.WriteLine($"Automated Audit: {(options.AutomatedAudit ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Express Scan: {(options.ExpressScan ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Open-source Report: {(options.OpensourceReport ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Include Third-Party Libraries: {(options.IncludeThirdParty ? "True" : "False")}");
+            Trace.WriteLine($"Assessment payload: {"\"" + options.Source + "\""}");
+            Trace.WriteLine($"Log file: {"\"" + LogName + "\""}");
 
-            if (options.debug)
+            if (!options.Debug) return;
+            var extensions = new StringBuilder();
+            var last = SupportedExtensions.Last();
+
+            foreach (var s in SupportedExtensions)
             {
-                StringBuilder extensions = new StringBuilder();
-                var last = supportedExtensions.Last();
-
-                foreach (string s in supportedExtensions)
+                if (s.Equals(last))
                 {
-                    if (s.Equals(last))
-                    {
-                        extensions.Append(s);
-                    }
-                    else
-                    {
-                        extensions.Append(s + ", ");
-                    }
+                    extensions.Append(s);
                 }
-                Trace.WriteLine(string.Format("Packaged file extensions: {0}", extensions.ToString()));
+                else
+                {
+                    extensions.Append(s + ", ");
+                }
             }
+            Trace.WriteLine($"Packaged file extensions: {extensions}");
         }
 
         /// <summary>
@@ -277,7 +306,7 @@ namespace FoDUploader
                 {
                     Trace.WriteLine("Using existing ZIP file.");
 
-                    if(includeAllFiles)
+                    if(_includeAllFiles)
                     {
                         return zipPath;
                     }
@@ -286,19 +315,19 @@ namespace FoDUploader
 
                     using (ZipFile zip = new ZipFile(zipPath))
                     {
-                        zip.ExtractAll(Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName), ExtractExistingFileAction.OverwriteSilently);
-                        zipPath = Path.Combine(Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User), outputName);
+                        zip.ExtractAll(Path.Combine(Path.GetTempPath(), OutputName), ExtractExistingFileAction.OverwriteSilently);
+                        zipPath = Path.Combine(Path.GetTempPath(), OutputName);
                     }
                 }
 
                 if (string.IsNullOrEmpty(tempPath))
                 {
-                    tempPath = Environment.GetEnvironmentVariable("TEMP", EnvironmentVariableTarget.User);
+                    tempPath = Path.GetTempPath();
                 }
 
-                string tempZipPath = Path.Combine(tempPath, outputName + ".zip");
+                string tempZipPath = Path.Combine(tempPath, OutputName + ".zip");
 
-                if (includeAllFiles || technologyStack.ToUpper() =="OBJECTIVE-C" || technologyStack.ToUpper() =="SWIFT" || technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
+                if (_includeAllFiles || _technologyStack.ToUpper() =="OBJECTIVE-C" || _technologyStack.ToUpper() =="SWIFT" || _technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
                 {
                     using (var zip = new ZipFile(tempZipPath))
                     {
@@ -306,11 +335,12 @@ namespace FoDUploader
                         zip.AddDirectory(zipPath);
                         if (zip.Entries.Count == 0)
                         {
-                            Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no files to ZIP. Please check your settings and try again.", zipPath));
-                            Environment.Exit(1);
+                            Trace.WriteLine(
+                                $"Error: Selected path \"{zipPath}\" contains no files to ZIP. Please check your settings and try again.");
+                            Environment.Exit(-1);
                         }
                         zip.Save();
-                        Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));
+                        Trace.WriteLine($"Created ZIP: {zip.Name}");
                         zipPath = tempZipPath;
                         return zipPath;
                     } 
@@ -320,7 +350,7 @@ namespace FoDUploader
                 using (var zip = new ZipFile(tempZipPath))
                 {
                     var directory = new DirectoryInfo(zipPath);
-                    var files = directory.EnumerateFiles("*", SearchOption.AllDirectories).Where(x => supportedExtensions.Contains(x.Extension.ToLower())).ToList();
+                    var files = directory.EnumerateFiles("*", SearchOption.AllDirectories).Where(x => SupportedExtensions.Contains(x.Extension.ToLower())).ToList();
 
                     List<string> assessmentFiles = new List<string>();
 
@@ -333,11 +363,12 @@ namespace FoDUploader
                     zip.AddFiles(assessmentFiles, true, "");
                     if (zip.Entries.Count == 0)
                     {
-                        Trace.WriteLine(string.Format("Error: Selected path \"{0}\" contains no scannable files to ZIP. Please check your application folder and try again.", zipPath));
-                        Environment.Exit(1);
+                        Trace.WriteLine(
+                            $"Error: Selected path \"{zipPath}\" contains no scannable files to ZIP. Please check your application folder and try again.");
+                        Environment.Exit(-1);
                     }
                     zip.Save();
-                    Trace.WriteLine(string.Format("Created ZIP: {0}", zip.Name));
+                    Trace.WriteLine($"Created ZIP: {zip.Name}");
 
                     return tempZipPath;
                 }
@@ -357,39 +388,39 @@ namespace FoDUploader
         /// <param name="options">command line options object</param>
         private static void SetAdditionalOptions(Options options)
         {
-            NameValueCollection queryParameters = GetqueryParameters(new UriBuilder(options.uploadURL));
-            technologyStack = queryParameters.Get("ts");
-            languageLevel = queryParameters.Get("ll");
-            tenantCode = queryParameters.Get("tc");
-            assessmentTypeID = Convert.ToInt32(queryParameters.Get("astid"));
+            NameValueCollection queryParameters = GetqueryParameters(new UriBuilder(options.UploadUrl));
+            _technologyStack = queryParameters.Get("ts");
+            _languageLevel = queryParameters.Get("ll");
+            _tenantCode = queryParameters.Get("tc");
+            _assessmentTypeId = Convert.ToInt32(queryParameters.Get("astid"));
 
-            includeAllFiles = options.includeAllPayload;
+            _includeAllFiles = options.IncludeAllPayload;
 
-            if (string.IsNullOrEmpty(options.apiToken))
+            if (string.IsNullOrEmpty(options.ApiToken))
             {
-                isTokenAuth = false;
+                _isTokenAuth = false;
             }
         }
         private static void ConfigureConsoleOutput()
         {
             try
             {
-                int window_height = Console.WindowHeight;
-                isConsole = true;
+                // ReSharper disable once UnusedVariable
+                int windowHeight = Console.WindowHeight;
+                _isConsole = true;
             }
             catch {
 
-                isConsole = false;
+                _isConsole = false;
 
-                var streamwriter = new StreamWriter(Console.OpenStandardOutput());
+                var streamwriter = new StreamWriter(Console.OpenStandardOutput()) {AutoFlush = true};
 
-                streamwriter.AutoFlush = true;
                 Console.SetOut(streamwriter);
             }
         }
-        public static NameValueCollection GetqueryParameters(UriBuilder postURL)
+        public static NameValueCollection GetqueryParameters(UriBuilder postUrl)
         {
-            NameValueCollection queryParameters = HttpUtility.ParseQueryString(postURL.Query);
+            var queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
             return queryParameters;
         }
     }

@@ -2,7 +2,9 @@
 This project is a MIT-licensed .NET Fortify on Demand assessment uploader with several convenience features.
 
 * The only dependency is .NET 4.5+
-* Checks that an assessment for the target application is not in progress/paused before attempting to upload; correct entitlement is also validated
+* Checks that an assessment for the target application is not in progress/paused before attempting to upload 
+* Checks for correct entitlement to scan before attempting to upload
+* Notifies if a selected assessment option, e.g. open-source reporting, Automated Audit, or Express Scan are requested, but not enabled for the account
 * Package a folder as a ZIP, or use an existing ZIP, determined by --source
 * Logging, status and errors are written to a log in temp - useful for "headless" instances like with TFS post-build actions or troubleshooting
 * File filtering - by default the uploader will filter submitted code for what SCA can scan, leaving out graphics etc. This can be disabled, but taking advantage of this can greatly reduce submission time 

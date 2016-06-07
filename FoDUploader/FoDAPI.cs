@@ -9,6 +9,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -20,7 +21,7 @@ using RestSharp.Deserializers;
 
 namespace FoDUploader
 {
-    class FoDapi
+    internal class FoDapi
     {
         private readonly string _apiToken;
         private readonly string _apiSecret;
@@ -97,7 +98,7 @@ namespace FoDUploader
                 Trace.WriteLine($"DEBUG: POST string: {postUri}");
             }
 
-            int attempts = 0;
+            var attempts = 0;
             string httpStatus;
             IRestResponse response;
 
@@ -106,7 +107,7 @@ namespace FoDUploader
                 response = client.Execute(request);
                 httpStatus = response.StatusCode.ToString();
                 attempts++;
-                if (httpStatus == "OK")
+                if (httpStatus.Equals("OK"))
                 {
                     break;
                 }
@@ -128,13 +129,13 @@ namespace FoDUploader
 
         public void SendScanPost()
         {
-            FileInfo fi = new FileInfo(_submissionZip);
+            var fi = new FileInfo(_submissionZip);
 
             Trace.WriteLine("Beginning upload....");
             // endpoint https://www.hpfod.com/api/v1/Release/{releaseId}/scan/
             // parameters ?assessmentTypeId=&technologyStack=&languageLevel=&fragNo=&offset=&
 
-            StringBuilder endpoint = new StringBuilder();
+            var endpoint = new StringBuilder();
             endpoint.Append(_baseUri.Scheme + "://");
             endpoint.Append(_baseUri.Host + "/");
             endpoint.Append("api/v1/Release/");
@@ -144,17 +145,17 @@ namespace FoDUploader
             var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
 
             // Read it in chunks
-            string uploadStatus = "";           
+            var uploadStatus = "";           
 
-            using (FileStream fs = new FileStream(_submissionZip, FileMode.Open))
+            using (var fs = new FileStream(_submissionZip, FileMode.Open))
             {
                 byte[] readByteBuffer = new byte[Seglen];
 
-                int fragmentNumber = 0;
-                int offset = 0;
+                var fragmentNumber = 0;
+                var offset = 0;
                 double bytesSent = 0;
                 double fileSize = fi.Length;
-                long chunkSize = Seglen;
+                var chunkSize = Seglen;
 
                 try
                 {
@@ -198,7 +199,7 @@ namespace FoDUploader
                     fs?.Close();
                 }
 
-                if (uploadStatus == "OK")
+                if (uploadStatus.Equals("OK"))
                 {
                     Trace.WriteLine("Assessment submission successful.");
                 }
@@ -217,7 +218,7 @@ namespace FoDUploader
         /// </summary>
         public bool Authorize()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.Append(_baseUri.Scheme);
             sb.Append("://");
             sb.Append(_baseUri.Host + "/");
@@ -241,7 +242,7 @@ namespace FoDUploader
                 request.AddParameter("password", _password);
             }
 
-            int attempts = 0;
+            var attempts = 0;
 
             do
             {
@@ -299,7 +300,7 @@ namespace FoDUploader
         public ReleaseResponse GetReleaseInfo()
         {
 
-            StringBuilder endpoint = new StringBuilder();
+            var endpoint = new StringBuilder();
             endpoint.Append(_baseUri.Scheme + "://");
             endpoint.Append(_baseUri.Host + "/");
             endpoint.Append("api/v1/Release/");
@@ -314,7 +315,7 @@ namespace FoDUploader
             try
             {
                var response = client.Execute(request);
-               ReleaseResponse release = new JsonDeserializer().Deserialize<ReleaseResponse>(response);
+               var release = new JsonDeserializer().Deserialize<ReleaseResponse>(response);
                 return release;
             }
             catch (Exception ex)
@@ -342,9 +343,9 @@ namespace FoDUploader
                 var response = client.Execute(request);
                 if (response.StatusDescription.Equals("Unauthorized"))
                 {
-                    Trace.WriteLine("Note: Your token is not authorized to retrieve entitlement info. Please use higher privilege authentication if you would like this information in this utility.");
+                    Trace.WriteLine("Note: Your token is not authorized to retrieve entitlement information. Please use higher privilege authentication if you would like this information displayed in this utility.");
                 }
-                TenantEntitlementQuery entitlements = new JsonDeserializer().Deserialize<TenantEntitlementQuery>(response);
+                var entitlements = new JsonDeserializer().Deserialize<TenantEntitlementQuery>(response);
                 return entitlements;
             }
             catch (Exception ex)
@@ -355,19 +356,42 @@ namespace FoDUploader
 
         }
 
+        public Features GetFeatureInfo()
+        {
+            var endpoint = new StringBuilder();
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
+            endpoint.Append("api/v3/tenants/features");
+
+            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
+            var request = new RestRequest(Method.GET);
+
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            try
+            {
+                var response = client.Execute(request);
+
+                var scanfeatures = new JsonDeserializer().Deserialize<Features>(response);
+                return scanfeatures;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                throw;
+            }
+        }
+
         public bool IsLoggedIn()
         {
-            if (string.IsNullOrWhiteSpace(_accessToken))
-            {
-                return false;
-            }
-            return true;
+            return !string.IsNullOrWhiteSpace(_accessToken);
         }
 
 
         public void RetireToken()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.Append(_baseUri.Scheme);
             sb.Append("://");
             sb.Append(_baseUri.Host + "/");
@@ -393,7 +417,7 @@ namespace FoDUploader
 
         private NameValueCollection GetqueryParameters(UriBuilder postUrl)
         {
-            NameValueCollection queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
+            var queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
             return queryParameters;
         }
     }

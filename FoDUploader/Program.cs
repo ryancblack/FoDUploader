@@ -22,7 +22,7 @@ using Ionic.Zip;
 
 namespace FoDUploader
 {
-    internal class Program
+    internal static class Program
     {
         private static bool _isTokenAuth = true;
         private static bool _includeAllFiles;
@@ -91,7 +91,7 @@ namespace FoDUploader
             Environment.Exit(0);
         }
 
-        public static void Run(Options options)
+        private static void Run(Options options)
         {
             SetAdditionalOptions(options);
             PrintOptions(options);
@@ -137,9 +137,11 @@ namespace FoDUploader
 
             */
 
-            CheckReleaseStatus(api, options);
+            CheckReleaseStatus(api);
 
             CheckEntitlementStatus(api, options);
+
+            CheckAssessmentOptions(api, options);
 
             api.SendScanPost();
 
@@ -159,8 +161,7 @@ namespace FoDUploader
         ///  Checks the release to determine if it's retired, in progress, or paused
         /// </summary>
         /// <param name="api"></param>
-        /// <param name="options"></param>
-        private static void CheckReleaseStatus(FoDapi api, Options options)
+        private static void CheckReleaseStatus(FoDapi api)
         {
             var releaseInfo = api.GetReleaseInfo();
             var isRetired = releaseInfo.Data.StaticScanStatusId.Equals(0);
@@ -249,6 +250,35 @@ namespace FoDUploader
 
         }
 
+        private static void CheckAssessmentOptions(FoDapi api, Options options)
+        {
+            var assessmentFeatures = api.GetFeatureInfo();
+            var features = assessmentFeatures.Items.Select(feature => feature.Name).ToList();
+
+            if (options.OpensourceReport)
+            {
+                if (!features.Contains("SonaType"))
+                {
+                    Trace.WriteLine("Note: Open-source reporting is not enabled for your account, proceeding without this option.");
+                }
+            }
+            if (options.AutomatedAudit)
+            {
+                if (!features.Contains("AuditPreference"))
+                {
+                    Trace.WriteLine("Note: Automated Audit is not enabled for your account, proceeding without this option.");
+                }
+            }
+            if (options.ExpressScan)
+            {
+                if (!features.Contains("ScanPreference"))
+                {
+                    Trace.WriteLine("Note: Express Scan is not enabled for your account, proceeding without this option.");
+                }
+            }
+
+        }
+
         private static void PrintOptions(Options options)
         {
 
@@ -300,7 +330,7 @@ namespace FoDUploader
         {
             try
             {
-                FileAttributes fa = File.GetAttributes(zipPath);
+                var fa = File.GetAttributes(zipPath);
 
                 if (!fa.HasFlag(FileAttributes.Directory) && Path.GetExtension(zipPath) == ".zip")
                 {
@@ -325,7 +355,7 @@ namespace FoDUploader
                     tempPath = Path.GetTempPath();
                 }
 
-                string tempZipPath = Path.Combine(tempPath, OutputName + ".zip");
+                var tempZipPath = Path.Combine(tempPath, OutputName + ".zip");
 
                 if (_includeAllFiles || _technologyStack.ToUpper() =="OBJECTIVE-C" || _technologyStack.ToUpper() =="SWIFT" || _technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
                 {
@@ -354,7 +384,7 @@ namespace FoDUploader
 
                     List<string> assessmentFiles = new List<string>();
 
-                    foreach (FileInfo fi in files)
+                    foreach (var fi in files)
                     {
                         assessmentFiles.Add(fi.FullName);
                     }

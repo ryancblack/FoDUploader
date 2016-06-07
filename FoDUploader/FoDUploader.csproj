@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="API\AuthorizationResponse.cs" />
+    <Compile Include="API\Features.cs" />
     <Compile Include="API\ReleaseResponse.cs" />
     <Compile Include="API\TenantEntitlement.cs" />
     <Compile Include="FoDAPI.cs" />

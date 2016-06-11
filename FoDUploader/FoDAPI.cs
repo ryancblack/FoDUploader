@@ -9,12 +9,11 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
-using System.Web;
 using FoDUploader.API;
 using RestSharp;
 using RestSharp.Deserializers;
@@ -28,7 +27,10 @@ namespace FoDUploader
         private readonly string _userName;
         private readonly string _password;
         private readonly string _submissionZip;
+        private string _entitlementFrequencyType;
+        private int? _entitlementId;
 
+        private readonly bool _doOpensourceReport;
         private readonly bool _doExpressScan;
         private readonly bool _doAutomatedAudit;
         private readonly bool _includeThirdParty;
@@ -46,106 +48,162 @@ namespace FoDUploader
         private const int Globaltimeoutinminutes = 1 * 60000;
         private const int Maxretries = 5;
 
-        public bool DoOpensourceReport { get; }
-
-        public FoDapi(Options options, string zip)
+        /// <summary>
+        /// Constructor for checking tenant information only
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="parameters"></param>
+        public FoDapi(Options options, NameValueCollection parameters)
         {
             _baseUri = new UriBuilder(options.UploadUrl);
-            _queryParameters = GetqueryParameters(_baseUri);
+            _queryParameters = parameters;
+            _isTokenAuth = (string.IsNullOrWhiteSpace(options.Username));
+            _apiToken = options.ApiToken;
+            _apiSecret = options.ApiTokenSecret;
+            _userName = options.Username;
+            _password = options.Password;
+            _doAutomatedAudit = options.AutomatedAudit;
+            _doOpensourceReport = options.OpensourceReport;
+            _doExpressScan = options.ExpressScan;
+            _includeThirdParty = options.IncludeThirdParty;
+            _isDebug = options.Debug;
+        }
+
+        /// <summary>
+        /// Constructor for submitting an assessment
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="zip"></param>
+        /// <param name="parameters"></param>
+        public FoDapi(Options options, string zip, NameValueCollection parameters)
+        {
+            _baseUri = new UriBuilder(options.UploadUrl);
+            _queryParameters = parameters;
             _isTokenAuth = (string.IsNullOrWhiteSpace(options.Username));
             _submissionZip = zip;
             _apiToken = options.ApiToken;
             _apiSecret = options.ApiTokenSecret;
             _userName = options.Username;
             _password = options.Password;
+            _entitlementId = options.EntitlementId;
             _doAutomatedAudit = options.AutomatedAudit;
-            DoOpensourceReport = options.OpensourceReport;
+            _doOpensourceReport = options.OpensourceReport;
             _doExpressScan = options.ExpressScan;
             _includeThirdParty = options.IncludeThirdParty;
             _isDebug = options.Debug;
         }
 
-        private IRestResponse SendData(RestClient client, byte[] data, long fragNo, long offset)
+        /// <summary>
+        /// Obtains, or updates, the authorization token for FoD. If isAuthToken is true client_credentials will be used instead of password
+        /// </summary>
+        public bool Authorize()
         {
+            var sb = new StringBuilder();
+            sb.Append(_baseUri.Scheme);
+            sb.Append("://");
+            sb.Append(_baseUri.Host + "/");
+            sb.Append("oauth/token");
 
-            var request = new RestRequest(Method.POST);
+            var client = new RestClient(sb.ToString());
+            var request = new RestRequest("", Method.POST);
 
-            request.AddHeader("Authorization", "Bearer " + _accessToken);
-            request.AddHeader("Content-Type", "application/octet-stream");
+            request.AddParameter("scope", "https://hpfod.com/tenant");
 
-            // add tenant/scan parameters
-
-            request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
-            request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
-
-            if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
+            if (_isTokenAuth)
             {
-                request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
+                request.AddParameter("grant_type", "client_credentials");
+                request.AddParameter("client_id", _apiToken);
+                request.AddParameter("client_secret", _apiSecret);
             }
-
-            // add optional assessment parameters for sonatype, automated audit, express scanning
-
-            request = AddOptionalParameters(request);
-
-            request.AddQueryParameter("fragNo", fragNo.ToString());
-            request.AddQueryParameter("offset", offset.ToString());
-            request.AddParameter("application/octet-stream", data, ParameterType.RequestBody);
-
-            var postUri = client.BuildUri(request).AbsoluteUri;
-
-            if (_isDebug)
+            else
             {
-                Trace.WriteLine($"DEBUG: POST string: {postUri}");
+                request.AddParameter("grant_type", "password");
+                request.AddParameter("username", _queryParameters.Get("tc") + @"\" + _userName);
+                request.AddParameter("password", _password);
             }
 
             var attempts = 0;
-            string httpStatus;
-            IRestResponse response;
 
             do
             {
-                response = client.Execute(request);
-                httpStatus = response.StatusCode.ToString();
-                attempts++;
-                if (httpStatus.Equals("OK"))
+                try
                 {
-                    break;
+                    attempts++;
+                    var response = client.Execute(request);
+                    _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
+
+                    if (!string.IsNullOrEmpty(_accessToken))
+                    {
+                        if (_isDebug)
+                        {
+                            Trace.WriteLine($"DEBUG: Authentication Token: {_accessToken}");
+                        }
+                        return true;
+                    }
                 }
-                if (_isDebug)
+                catch (Exception)
                 {
-                    Trace.WriteLine("Error: POST Response: " + response.Content);
-                }
-                if (attempts >= Maxretries)
-                {
-                    Trace.WriteLine("Error: Maximum POST attempts reached, please check your connection and try again later.");
-                    break;
+                    _accessToken = null;
+                    Trace.WriteLine($"Error count {attempts} retrieving API access token");
                 }
             }
+            while (attempts <= Maxretries);
 
-            while (httpStatus != "OK" || attempts < Maxretries);
+            return false;
+        }
 
-            return response;
+        public void RetireToken()
+        {
+            var sb = new StringBuilder();
+            sb.Append(_baseUri.Scheme);
+            sb.Append("://");
+            sb.Append(_baseUri.Host + "/");
+            sb.Append("oauth/retireToken");
+
+            var client = new RestClient(sb.ToString());
+            var request = new RestRequest("", Method.GET);
+
+            request.AddHeader("Auhorization", "Bearer " + _accessToken);
+
+            try
+            {
+                var response = client.Execute(request);
+                _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
+            }
+            catch (Exception ex)
+            {
+                _accessToken = null;
+                Trace.WriteLine(ex.Message);
+                throw;
+            }
         }
 
         public void SendScanPost()
         {
+            // endpoint: POST /api/v3/releases/{releaseId}/static-scans/start-scan
+            // required parameters: releaseId, assessmentTypeId, technologyStack, languageLevel, fragNo, offset, entitlementId, entitlementFrequencyType
+            // New optional: isRemediationScan*
+            // *I don't know if we really care about this when wanting to start a scan?
+
+
+            SetEntitlementInformation();
+
+             
             var fi = new FileInfo(_submissionZip);
 
             Trace.WriteLine("Beginning upload....");
-            // endpoint https://www.hpfod.com/api/v1/Release/{releaseId}/scan/
-            // parameters ?assessmentTypeId=&technologyStack=&languageLevel=&fragNo=&offset=&
 
             var endpoint = new StringBuilder();
             endpoint.Append(_baseUri.Scheme + "://");
             endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v1/Release/");
+            endpoint.Append("api/v3/releases/");
             endpoint.Append(_queryParameters.Get("pv"));
-            endpoint.Append("/scan/");
+            endpoint.Append("/static-scans/start-scan");
 
-            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
+            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
 
             // Read it in chunks
-            var uploadStatus = "";           
+            var uploadStatus = "";
 
             using (var fs = new FileStream(_submissionZip, FileMode.Open))
             {
@@ -212,69 +270,85 @@ namespace FoDUploader
             }
         }
 
-
-        /// <summary>
-        /// Obtains, or updates, the authorization token for FoD. If isAuthToken is true client_credentials will be used instead of password
-        /// </summary>
-        public bool Authorize()
+        private IRestResponse SendData(RestClient client, byte[] data, long fragNo, long offset)
         {
-            var sb = new StringBuilder();
-            sb.Append(_baseUri.Scheme);
-            sb.Append("://");
-            sb.Append(_baseUri.Host + "/");
-            sb.Append("oauth/token");
+            // endpoint: POST /api/v3/releases/{releaseId}/static-scans/start-scan
+            // required parameters: releaseId, assessmentTypeId, technologyStack, languageLevel, fragNo, offset, entitlementId, entitlementFrequencyType
+            // New optional: isRemediationScan*
+            // *I don't know if we really care about this when wanting to start a scan?
 
-            var client = new RestClient(sb.ToString());
-            var request = new RestRequest("", Method.POST);
+            var request = new RestRequest(Method.POST);
 
-            request.AddParameter("scope", "https://hpfod.com/tenant");
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
 
-            if (_isTokenAuth)
+            // add tenant/scan parameters
+            request.AddQueryParameter("releaseId", _queryParameters.Get("pv"));
+            request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
+            request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
+
+            // if the user has specified the entitlement ID they wish to use set that here.
+
+            request.AddQueryParameter("entitlementId", _entitlementId.ToString());
+            request.AddQueryParameter("entitlementFrequencyType", _entitlementFrequencyType);
+
+            if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
             {
-                request.AddParameter("grant_type", "client_credentials");
-                request.AddParameter("client_id", _apiToken);
-                request.AddParameter("client_secret", _apiSecret);
+                request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
             }
-            else
+            else  // This is a workaround for HFD-1239 where it appears a language level may not be null for V3 regardless of the technology type
             {
-                request.AddParameter("grant_type", "password");
-                request.AddParameter("username", _queryParameters.Get("tc") + @"\" + _userName);
-                request.AddParameter("password", _password);
+                request.AddQueryParameter("languageLevel", "1.8");
+            }
+
+            // add optional assessment parameters for sonatype, automated audit, express scanning
+
+            request = AddOptionalParameters(request);
+
+            request.AddQueryParameter("fragNo", fragNo.ToString());
+            request.AddQueryParameter("offset", offset.ToString());
+            request.AddParameter("application/octet-stream", data, ParameterType.RequestBody);
+
+            var postUri = client.BuildUri(request).AbsoluteUri;
+
+            if (_isDebug)
+            {
+                Trace.WriteLine($"DEBUG: POST string: {postUri}");
             }
 
             var attempts = 0;
+            string httpStatus;
+            IRestResponse response;
 
             do
             {
-                try
+                response = client.Execute(request);
+                httpStatus = response.StatusCode.ToString();
+                attempts++;
+                if (httpStatus.Equals("Accepted") || httpStatus.Equals("OK"))  // the final response for the -1 fragment is OK instead of Accepted
                 {
-                    attempts++;
-                    var response = client.Execute(request);
-                    _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
-
-                    if (!string.IsNullOrEmpty(_accessToken))
-                    {
-                        if (_isDebug)
-                        {
-                            Trace.WriteLine($"DEBUG: Authentication Token: {_accessToken}");
-                        }
-                        return true;
-                    }
+                    break;
                 }
-                catch (Exception)
+                if (_isDebug)
                 {
-                    _accessToken = null;
-                    Trace.WriteLine($"Error count {attempts} retrieving API access token");
+                    Trace.WriteLine("Error: POST Response: " + response.Content);
+                }
+                if (attempts >= Maxretries)
+                {
+                    Trace.WriteLine("Error: Maximum POST attempts reached, please check your connection and try again later.");
+                    break;
                 }
             }
-            while (attempts <= Maxretries);
 
-            return false;
+            while (httpStatus != "OK" || attempts < Maxretries);
+
+            return response;
         }
+
 
         private RestRequest AddOptionalParameters(RestRequest request)
         {
-            if (DoOpensourceReport)
+            if (_doOpensourceReport)
             {
                 request.AddQueryParameter("doSonatypeScan", "true");
             }
@@ -297,13 +371,13 @@ namespace FoDUploader
             return request;
         }
 
-        public ReleaseResponse GetReleaseInfo()
+        public Release GetReleaseInfo()
         {
 
             var endpoint = new StringBuilder();
             endpoint.Append(_baseUri.Scheme + "://");
             endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v1/Release/");
+            endpoint.Append("api/v3/releases/");
             endpoint.Append(_queryParameters.Get("pv"));
 
             var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
@@ -315,7 +389,7 @@ namespace FoDUploader
             try
             {
                var response = client.Execute(request);
-               var release = new JsonDeserializer().Deserialize<ReleaseResponse>(response);
+               var release = new JsonDeserializer().Deserialize<Release>(response);
                 return release;
             }
             catch (Exception ex)
@@ -325,15 +399,19 @@ namespace FoDUploader
             }
         }
 
-        public TenantEntitlementQuery GetEntitlementInfo()
+        private AssessmentTypes GetAssessmentTypes()
         {
             var endpoint = new StringBuilder();
             endpoint.Append(_baseUri.Scheme + "://");
             endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v2/TenantEntitlements");
+            endpoint.Append("api/v3/releases/");
+            endpoint.Append(_queryParameters.Get("pv"));
+            endpoint.Append("/assessment-types");
 
-            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
+            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
             var request = new RestRequest(Method.GET);
+
+            request.AddQueryParameter("scantype", "static");
 
             request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
@@ -341,19 +419,74 @@ namespace FoDUploader
             try
             {
                 var response = client.Execute(request);
-                if (response.StatusDescription.Equals("Unauthorized"))
-                {
-                    Trace.WriteLine("Note: Your token is not authorized to retrieve entitlement information. Please use higher privilege authentication if you would like this information displayed in this utility.");
-                }
-                var entitlements = new JsonDeserializer().Deserialize<TenantEntitlementQuery>(response);
-                return entitlements;
+                var assessmentTypes = new JsonDeserializer().Deserialize<AssessmentTypes>(response);
+                return assessmentTypes;
             }
             catch (Exception ex)
             {
                 Trace.WriteLine(ex);
                 throw;
             }
+        }
+        /// <summary>
+        ///  Sets user-specified entitlement information or automatically determines what should be used based on Subscription -> available units -> units, even if negative 
+        ///  This is poorly coded and should be re-written once I am sure we even need to set this information in this way - Ryan
+        /// </summary>
+        private void SetEntitlementInformation()
+        {
+            var staticEntitlementTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1) && type.UnitsAvailable >= 1);
+            var subscriptionEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("Subscription"));
 
+            // lookup the correct frequency type by the user-specified entitlement ID
+            if (_entitlementId != null)
+            {
+                _entitlementFrequencyType =
+                    staticEntitlementTypes.Where(type => type.EntitlementId.Equals(_entitlementId))
+                        .Select(frequencyType => frequencyType.FrequencyType).First();
+                return;
+            }
+
+            if (subscriptionEntitlements.Any())
+            {
+                _entitlementId = subscriptionEntitlements.First().EntitlementId;
+                _entitlementFrequencyType = subscriptionEntitlements.First().FrequencyType;
+                Trace.WriteLine($"Note: Auto-selected subscription Entitlement ID: {_entitlementId}.");
+                return;
+            }
+
+            var singlescanEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("SingleScan"));
+
+            if (singlescanEntitlements.Any())
+            {
+                // will use the first one for now, may add logic to prefer the one ending soonest or with the least remaining credits - ask PM
+                _entitlementId = subscriptionEntitlements.First().EntitlementId;
+                _entitlementFrequencyType = subscriptionEntitlements.First().FrequencyType;
+                Trace.WriteLine($"Note: Auto-selected single scan Entitlement ID: {_entitlementId}.");
+                return;
+            }
+
+            Trace.WriteLine("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager");
+        }
+
+        public void ListAssessmentTypes()
+        {
+            var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1));
+
+            Trace.WriteLine("Listing all available assessment types...");
+            Trace.WriteLine(Environment.NewLine);
+
+            foreach (var assessmentType in staticAssessmentTypes)
+            {
+                Trace.WriteLine(assessmentType.Name);
+                Trace.WriteLine($"ID: {assessmentType.EntitlementId}");
+                Trace.WriteLine($"Frequency Type: {assessmentType.FrequencyType}");
+                Trace.WriteLine($"Units Available: {assessmentType.UnitsAvailable}");
+                Trace.WriteLine(string.IsNullOrEmpty(assessmentType.SubscriptionEndDate)
+                    ? "End Date: N/A"
+                    : $"End Date: {assessmentType.SubscriptionEndDate}");
+
+                Trace.WriteLine(Environment.NewLine);
+            }
         }
 
         public Features GetFeatureInfo()
@@ -386,39 +519,6 @@ namespace FoDUploader
         public bool IsLoggedIn()
         {
             return !string.IsNullOrWhiteSpace(_accessToken);
-        }
-
-
-        public void RetireToken()
-        {
-            var sb = new StringBuilder();
-            sb.Append(_baseUri.Scheme);
-            sb.Append("://");
-            sb.Append(_baseUri.Host + "/");
-            sb.Append("oauth/retireToken");
-
-            var client = new RestClient(sb.ToString());
-            var request = new RestRequest("", Method.GET);
-
-            request.AddHeader("Auhorization", "Bearer " + _accessToken);
-
-            try
-            {
-                var response = client.Execute(request);
-                _accessToken = new JsonDeserializer().Deserialize<AuthorizationResponse>(response).AccessToken;
-            }
-            catch (Exception ex)
-            {
-                _accessToken = null;
-                Trace.WriteLine(ex.Message);
-                throw;
-            }
-        }
-
-        private NameValueCollection GetqueryParameters(UriBuilder postUrl)
-        {
-            var queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
-            return queryParameters;
         }
     }
 }

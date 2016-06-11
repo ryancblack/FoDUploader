@@ -15,7 +15,7 @@ namespace FoDUploader
 {
     class Options
     {
-        public string AppName = "FoD Uploader 1.04";
+        public string AppName = "FoD Uploader 1.05";
         public string Copyright = "HPE Security Fortify on Demand, Ryan Black";
 
         public string GetUsage()
@@ -36,7 +36,7 @@ namespace FoDUploader
 
         }
 
-        [Option("source", Required = true, HelpText = "The ZIP file, or directory to be zipped, for submission to Fortify on Demand.")]
+        [Option("source", HelpText = "The ZIP file, or directory to be zipped, for submission to Fortify on Demand.")]
         public string Source { get; set; }
 
         [Option("username", HelpText = "Your portal username.", MutuallyExclusiveSet = "userauth")]
@@ -67,9 +67,16 @@ namespace FoDUploader
         public bool IncludeThirdParty { get; set; }
 
         [Option("includeAllFiles", DefaultValue = false, HelpText = "If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
-        public bool IncludeAllPayload { get; set; }
+        public bool IncludeAllPayload { get; set;}
+
+        [Option("displayEntitlement", DefaultValue = false, HelpText = "Displays entitlement information related to the application release ID. This option may be used to determine which specific entitlement is desired for manual specification; if enabled no assessment is submitted.")]
+        public bool DisplayAccountInformation { get; set; }
+
+        [Option("entitlementId", HelpText = "Optionally set an entitlement ID to use for the assessment")]
+        public int? EntitlementId { get; set; }
 
         [Option("debug", DefaultValue = false, HelpText = "Verbose setting, API call, POST detail, and entitlement information will be written to the console.")]
         public bool Debug { get; set; }
+
     }
 }

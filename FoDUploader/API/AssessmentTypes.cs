@@ -8,16 +8,30 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion 
 
+using System.Collections.Generic;
 
 namespace FoDUploader.API
 {
-    public class AuthorizationResponse
+    public class AssessmentTypes
     {
-        public string AccessToken { get; set; }
-        public string TokenType { get; set; }
-        public int ExpiresInSeconds { get; set; }
-        public string RefreshToken { get; set; }
-        public string Scope { get; set; }
+        public List<Item> Items { get; set; }
+        
+        public int TotalCount { get; set; }
 
+        public class Item
+        {
+            public string AssessmentTypeId { get; set; }
+            public string Name { get; set; }
+            public string ScanType { get; set; }
+            public int ScanTypeId { get; set; }
+            public int EntitlementId { get; set; }
+            public string FrequencyType { get; set; }
+            public int FrequencyTypeId { get; set; }
+            public int Units { get; set; }
+            public int UnitsAvailable { get; set; }
+            public string SubscriptionEndDate { get; set; }
+            public bool IsRemediation { get; set; }
+            public int RemediationScansAvailable { get; set; }
+        }
     }
 }

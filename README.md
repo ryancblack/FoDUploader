@@ -13,39 +13,55 @@ Proxy connections are supported automatically provided they are configured in In
 
 **Options**
 
-FoD Uploader 1.04
+FoD Uploader 1.05
 Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black
 
-  
-  --source               Required. The ZIP file, or directory to be zipped, for submission to Fortify on Demand.
+  --source                The ZIP file, or directory to be zipped, for 
+                          submission to Fortify on Demand.
 
-  --username             Your portal username.
+  --username              Your portal username.
 
-  --password             Your portal password.
+  --password              Your portal password.
 
-  --apiToken             Your api token.
+  --apiToken              Your api token.
 
-  --apiTokenSecret       Your api token secret key.
+  --apiTokenSecret        Your api token secret key.
 
-  --uploadURL            Required. Your BSI URL for the target application,
-                         obtained in the customer portal.
+  --uploadURL             Required. Your BSI URL for the target application, 
+                          obtained in the customer portal.
 
-  --opensourceReport       (Default: False) If set to true, and enabled in the
-                         tenant, an open-source report will be requested.
+  --opensourceReport      (Default: False) If set to true, and enabled in the 
+                          tenant, an open-source report will be requested.
 
-  --automatedAudit       (Default: False) If set to true, and enabled in the
-                         tenant, the Automated Audit feature will be requested.
+  --automatedAudit        (Default: False) If set to true, and enabled in the 
+                          tenant, the Automated Audit feature will be requested.
 
-  --expressScan          (Default: False) If set to true, and enabled in the
-                         tenant, the Express Scan feature will be requested.
+  --expressScan           (Default: False) If set to true, and enabled in the 
+                          tenant, the Express Scan feature will be requested.
 
-  --includeThirdParty    (Default: False) If set to true third-party libraries
-                         will be included in assessment results.
+  --includeThirdParty     (Default: False) If set to true third-party libraries
+                          will be included in assessment results.
 
-  --debug				 (Default: False) Verbose setting, API call, POST detail, and entitlement information will be written to the console.
+  --includeAllFiles       (Default: False) If set to true all files, including 
+                          extraneous non-scannable content, will be submitted 
+                          to Fortify on Demand. The default of "false" will 
+                          greatly reduce the size of the submission with no 
+                          impact to assessment quality.
 
-  --includeAllFiles	     (Default: False) If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of "false" will greatly reduce the size of the submission with no impact to assessment quality.
+  --displayEntitlement    (Default: False) Displays entitlement information 
+                          related to the application release ID. This option 
+                          may be used to determine which specific entitlement 
+                          is desired for manual specification; if enabled no 
+                          assessment is submitted.
+
+  --entitlementId         Optionally set an entitlement ID to use for the 
+                          assessment
+
+  --debug                 (Default: False) Verbose setting, API call, POST 
+                          detail, and entitlement information will be written 
+                          to the console.
 
 
 Usage: foduploader.exe --optionName "Value"
+
 

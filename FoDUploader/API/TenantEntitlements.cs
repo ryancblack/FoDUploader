@@ -6,37 +6,42 @@
 //The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#endregion
+#endregion 
 
-using System;
 using System.Collections.Generic;
 
 namespace FoDUploader.API
 {
-    public class TenantEntitlement
-    {
-        public int EntitlementId { get; set; }
-        public int UnitsPurchased { get; set; }
-        public int UnitsConsumed { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public int AssessmentTypeId { get; set; }
-        public int FrequencyTypeId { get; set; }
-        public string SubscriptionLength { get; set; }
-    }
-    public class TenantEntitlementResponse
-    {
-        public int EntitlementTypeId { get; set; }
-        public int SubscriptionTypeId { get; set; }
-        public List<TenantEntitlement> TenantEntitlements { get; set; }
-    }
 
-    public class TenantEntitlementQuery
+    /// <summary>
+    /// GET /api/v3/tenant-entitlements
+    /// https://api.hpfod.com/swagger/ui/index#!/TenantEntitlements/TenantEntitlementsV3_Get
+    /// </summary>
+    public class TenantEntitlements
     {
-        public TenantEntitlementResponse Data { get; set; }
-        public int ResponseCode { get; set; }
-        public int ErrorCode { get; set; }
-        public object Message { get; set; }
-        public object Links { get; set; }
+        public int entitlementTypeId { get; set; }
+        public string entitlementType { get; set; }
+        public int subscriptionTypeId { get; set; }
+        public string subscriptionType { get; set; }
+        public List<TenantEntitlement> tenantEntitlements { get; set; }
+
+
+        public class ExtendedProperties
+        {
+            public int assessmentTypeId { get; set; }
+            public int frequencyTypeId { get; set; }
+            public string frequencyType { get; set; }
+            public string subscriptionLength { get; set; }
+        }
+
+        public class TenantEntitlement
+        {
+            public string entitlementId { get; set; }
+            public int unitsPurchased { get; set; }
+            public int unitsConsumed { get; set; }
+            public string startDate { get; set; }
+            public string endDate { get; set; }
+            public ExtendedProperties extendedProperties { get; set; }
+        }
     }
 }

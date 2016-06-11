@@ -77,10 +77,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="API\AssessmentTypes.cs" />
     <Compile Include="API\AuthorizationResponse.cs" />
     <Compile Include="API\Features.cs" />
-    <Compile Include="API\ReleaseResponse.cs" />
-    <Compile Include="API\TenantEntitlement.cs" />
+    <Compile Include="API\Release.cs" />
+    <Compile Include="API\TenantEntitlements.cs" />
     <Compile Include="FoDAPI.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />

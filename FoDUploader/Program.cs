@@ -122,7 +122,7 @@ namespace FoDUploader
 
             if (options.DisplayAccountInformation)
             {
-                DisplayAccountInformation(options, zipPath);
+                DisplayAccountInformation(options);
 
                 Trace.WriteLine("Note: You may specify an entitlement ID manually with --entitlementID <ID>, please run the utility without --displayEntitlement to proceed.");
 
@@ -195,7 +195,7 @@ namespace FoDUploader
         /// </summary>
         /// <param name="options"></param>
         /// <param name="zipPath"></param>
-        private static void DisplayAccountInformation(Options options, string zipPath)
+        private static void DisplayAccountInformation(Options options)
         {
             var api = new FoDapi(options, GetqueryParameters(new UriBuilder(options.UploadUrl)));
 

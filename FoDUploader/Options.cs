@@ -69,7 +69,7 @@ namespace FoDUploader
         [Option("includeAllFiles", DefaultValue = false, HelpText = "If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
         public bool IncludeAllPayload { get; set;}
 
-        [Option("displayEntitlement", DefaultValue = false, HelpText = "Displays entitlement information related to the application release ID. This option may be used to determine which specific entitlement is desired for manual specification; if enabled no assessment is submitted.")]
+        [Option("displayEntitlement", DefaultValue = false, HelpText = "Displays entitlement information related to the application release ID. This option may be used to determine which entitlement is desired for manual specification; if enabled no assessment is submitted.")]
         public bool DisplayAccountInformation { get; set; }
 
         [Option("entitlementId", HelpText = "Optionally set an entitlement ID to use for the assessment")]

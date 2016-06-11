@@ -183,11 +183,8 @@ namespace FoDUploader
             // endpoint: POST /api/v3/releases/{releaseId}/static-scans/start-scan
             // required parameters: releaseId, assessmentTypeId, technologyStack, languageLevel, fragNo, offset, entitlementId, entitlementFrequencyType
             // New optional: isRemediationScan*
-            // *I don't know if we really care about this when wanting to start a scan?
-
 
             SetEntitlementInformation();
-
              
             var fi = new FileInfo(_submissionZip);
 

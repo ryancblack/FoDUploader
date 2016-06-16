@@ -431,17 +431,13 @@ namespace FoDUploader
         /// </summary>
         private void SetEntitlementInformation()
         {
-            var staticEntitlementTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1) && type.UnitsAvailable >= 1);
-            var subscriptionEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("Subscription"));
+
+            // review to ensure this make sense for both unit-based and subscription
+
+            var staticEntitlementTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static")); //  && !type.EntitlementId.Equals(-1) && type.UnitsAvailable >= 1
+            var subscriptionEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("Subscription") && !type.EntitlementId.Equals(-1));
 
             // lookup the correct frequency type by the user-specified entitlement ID
-            if (_entitlementId != null)
-            {
-                _entitlementFrequencyType =
-                    staticEntitlementTypes.Where(type => type.EntitlementId.Equals(_entitlementId))
-                        .Select(frequencyType => frequencyType.FrequencyType).First();
-                return;
-            }
 
             if (subscriptionEntitlements.Any())
             {
@@ -456,8 +452,8 @@ namespace FoDUploader
             if (singlescanEntitlements.Any())
             {
                 // will use the first one for now, may add logic to prefer the one ending soonest or with the least remaining credits - ask PM
-                _entitlementId = subscriptionEntitlements.First().EntitlementId;
-                _entitlementFrequencyType = subscriptionEntitlements.First().FrequencyType;
+                _entitlementId = singlescanEntitlements.First().EntitlementId;
+                _entitlementFrequencyType = singlescanEntitlements.First().FrequencyType;
                 Trace.WriteLine($"Note: Auto-selected single scan Entitlement ID: {_entitlementId}.");
                 return;
             }
@@ -467,9 +463,9 @@ namespace FoDUploader
 
         public void ListAssessmentTypes()
         {
-            var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1));
+            var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1)); // TODO: find out if static premiums should be used, if so we need to know what to use for EntitlementID.
 
-            Trace.WriteLine("Listing all available assessment types...");
+            Trace.WriteLine("Listing all valid assessment types...");
             Trace.WriteLine(Environment.NewLine);
 
             foreach (var assessmentType in staticAssessmentTypes)

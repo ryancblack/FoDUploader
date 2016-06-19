@@ -48,6 +48,7 @@ namespace FoDUploader
         private const int Globaltimeoutinminutes = 1 * 60000;
         private const int Maxretries = 5;
 
+        #region Constructors
         /// <summary>
         /// Constructor for checking tenant information only
         /// </summary>
@@ -92,6 +93,10 @@ namespace FoDUploader
             _includeThirdParty = options.IncludeThirdParty;
             _isDebug = options.Debug;
         }
+
+        #endregion
+
+        #region Authentication
 
         /// <summary>
         /// Obtains, or updates, the authorization token for FoD. If isAuthToken is true client_credentials will be used instead of password
@@ -178,6 +183,106 @@ namespace FoDUploader
             }
         }
 
+        public bool IsLoggedIn()
+        {
+            return !string.IsNullOrWhiteSpace(_accessToken);
+        }
+
+
+        #endregion
+
+        #region Endpoint Calls
+        public Release GetReleaseInfo()
+        {
+
+            var endpoint = new StringBuilder();
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
+            endpoint.Append("api/v3/releases/");
+            endpoint.Append(_queryParameters.Get("pv"));
+
+            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
+            var request = new RestRequest(Method.GET);
+
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            try
+            {
+                var response = client.Execute(request);
+                var release = new JsonDeserializer().Deserialize<Release>(response);
+                return release;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                throw;
+            }
+        }
+
+        private AssessmentTypes GetAssessmentTypes()
+        {
+            var endpoint = new StringBuilder();
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
+            endpoint.Append("api/v3/releases/");
+            endpoint.Append(_queryParameters.Get("pv"));
+            endpoint.Append("/assessment-types");
+
+            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
+            var request = new RestRequest(Method.GET);
+
+            request.AddQueryParameter("scantype", "static");
+
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            try
+            {
+                var response = client.Execute(request);
+                var assessmentTypes = new JsonDeserializer().Deserialize<AssessmentTypes>(response);
+                return assessmentTypes;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the optional features on the account, e.g. Sonatype reporting, express scanning, and automated audit
+        /// </summary>
+        /// <returns>Features object</returns>
+        public Features GetFeatureInfo()
+        {
+            var endpoint = new StringBuilder();
+            endpoint.Append(_baseUri.Scheme + "://");
+            endpoint.Append(_baseUri.Host + "/");
+            endpoint.Append("api/v3/tenants/features");
+
+            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
+            var request = new RestRequest(Method.GET);
+
+            request.AddHeader("Authorization", "Bearer " + _accessToken);
+            request.AddHeader("Content-Type", "application/octet-stream");
+
+            try
+            {
+                var response = client.Execute(request);
+
+                var scanfeatures = new JsonDeserializer().Deserialize<Features>(response);
+                return scanfeatures;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                throw;
+            }
+        }
+        #endregion
+
+        #region Data POSTs
         public void SendScanPost()
         {
             // endpoint: POST /api/v3/releases/{releaseId}/static-scans/start-scan
@@ -185,7 +290,7 @@ namespace FoDUploader
             // New optional: isRemediationScan*
 
             SetEntitlementInformation();
-             
+
             var fi = new FileInfo(_submissionZip);
 
             Trace.WriteLine("Beginning upload....");
@@ -340,91 +445,10 @@ namespace FoDUploader
             while (httpStatus != "OK" || attempts < Maxretries);
 
             return response;
-        }
+        } 
+        #endregion
 
-
-        private RestRequest AddOptionalParameters(RestRequest request)
-        {
-            if (_doOpensourceReport)
-            {
-                request.AddQueryParameter("doSonatypeScan", "true");
-            }
-            if (_doAutomatedAudit)
-            {
-                request.AddQueryParameter("auditPreferenceId", "2");
-            }
-            if (_doExpressScan)
-            {
-                request.AddQueryParameter("scanPreferenceId", "2");
-            }
-            if (_includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
-            {
-                request.AddQueryParameter("excludeThirdPartyLibs", "false");
-            }
-            if (!_includeThirdParty)
-            {
-                request.AddQueryParameter("excludeThirdPartyLibs", "true");
-            }
-            return request;
-        }
-
-        public Release GetReleaseInfo()
-        {
-
-            var endpoint = new StringBuilder();
-            endpoint.Append(_baseUri.Scheme + "://");
-            endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v3/releases/");
-            endpoint.Append(_queryParameters.Get("pv"));
-
-            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
-            var request = new RestRequest(Method.GET);
-
-            request.AddHeader("Authorization", "Bearer " + _accessToken);
-            request.AddHeader("Content-Type", "application/octet-stream");
-
-            try
-            {
-               var response = client.Execute(request);
-               var release = new JsonDeserializer().Deserialize<Release>(response);
-                return release;
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(ex);
-                throw;
-            }
-        }
-
-        private AssessmentTypes GetAssessmentTypes()
-        {
-            var endpoint = new StringBuilder();
-            endpoint.Append(_baseUri.Scheme + "://");
-            endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v3/releases/");
-            endpoint.Append(_queryParameters.Get("pv"));
-            endpoint.Append("/assessment-types");
-
-            var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
-            var request = new RestRequest(Method.GET);
-
-            request.AddQueryParameter("scantype", "static");
-
-            request.AddHeader("Authorization", "Bearer " + _accessToken);
-            request.AddHeader("Content-Type", "application/octet-stream");
-
-            try
-            {
-                var response = client.Execute(request);
-                var assessmentTypes = new JsonDeserializer().Deserialize<AssessmentTypes>(response);
-                return assessmentTypes;
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(ex);
-                throw;
-            }
-        }
+        #region Utility Methods
         /// <summary>
         ///  Sets user-specified entitlement information or automatically determines what should be used based on Subscription -> available units -> units, even if negative 
         ///  This is poorly coded and should be re-written once I am sure we even need to set this information in this way - Ryan
@@ -457,10 +481,14 @@ namespace FoDUploader
                 Trace.WriteLine($"Note: Auto-selected single scan Entitlement ID: {_entitlementId}.");
                 return;
             }
-
+            // bail out if we cannot find any entitlements at all to use.
             Trace.WriteLine("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager");
+            Environment.Exit(-1);
         }
 
+        /// <summary>
+        /// Writes all non-premiums static assessment types to the console
+        /// </summary>
         public void ListAssessmentTypes()
         {
             var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1)); // TODO: find out if static premiums should be used, if so we need to know what to use for EntitlementID.
@@ -481,37 +509,32 @@ namespace FoDUploader
                 Trace.WriteLine(Environment.NewLine);
             }
         }
-
-        public Features GetFeatureInfo()
+        private RestRequest AddOptionalParameters(RestRequest request)
         {
-            var endpoint = new StringBuilder();
-            endpoint.Append(_baseUri.Scheme + "://");
-            endpoint.Append(_baseUri.Host + "/");
-            endpoint.Append("api/v3/tenants/features");
-
-            var client = new RestClient(endpoint.ToString()) {Timeout = Globaltimeoutinminutes*120};
-            var request = new RestRequest(Method.GET);
-
-            request.AddHeader("Authorization", "Bearer " + _accessToken);
-            request.AddHeader("Content-Type", "application/octet-stream");
-
-            try
+            if (_doOpensourceReport)
             {
-                var response = client.Execute(request);
-
-                var scanfeatures = new JsonDeserializer().Deserialize<Features>(response);
-                return scanfeatures;
+                request.AddQueryParameter("doSonatypeScan", "true");
             }
-            catch (Exception ex)
+            if (_doAutomatedAudit)
             {
-                Trace.WriteLine(ex);
-                throw;
+                request.AddQueryParameter("auditPreferenceId", "2");
             }
+            if (_doExpressScan)
+            {
+                request.AddQueryParameter("scanPreferenceId", "2");
+            }
+            if (_includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
+            {
+                request.AddQueryParameter("excludeThirdPartyLibs", "false");
+            }
+            if (!_includeThirdParty)
+            {
+                request.AddQueryParameter("excludeThirdPartyLibs", "true");
+            }
+            return request;
         }
+        #endregion
 
-        public bool IsLoggedIn()
-        {
-            return !string.IsNullOrWhiteSpace(_accessToken);
-        }
+
     }
 }

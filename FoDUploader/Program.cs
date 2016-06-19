@@ -37,6 +37,13 @@ namespace FoDUploader
         private static bool _isConsole;
 
 
+        private static NameValueCollection GetqueryParameters(UriBuilder postUrl)
+        {
+            var queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
+            return queryParameters;
+        }
+
+
         private static void Main(string[] args)
         {
             try
@@ -63,7 +70,7 @@ namespace FoDUploader
 
             var options = new Options();
 
-            ConfigureConsoleOutput();  // detects if app is running in a console, or not (like with TFS), will send all output to stdout for Visual Studio
+            CheckConsole();  // detects if app is running in a console, or not (like with TFS), will send all output to stdout for Visual Studio
 
             try
             {
@@ -188,6 +195,7 @@ namespace FoDUploader
             }
         }
 
+        #region Display Information
         /// <summary>
         /// Lists all valid assessment types, with entitlement IDs, for Static submissions
         /// </summary>
@@ -212,7 +220,54 @@ namespace FoDUploader
 
             api.ListAssessmentTypes();
         }
+        /// <summary>
+        /// Displays options set at the command line after validation and configuration
+        /// </summary>
+        /// <param name="options"></param>
+        private static void PrintSelectedOptions(Options options)
+        {
 
+            Trace.WriteLine(options.AppName);
+            Trace.WriteLine(options.Copyright + Environment.NewLine);
+            Trace.WriteLine("Selected options: ");
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (_isTokenAuth)
+            {
+                Trace.WriteLine($"Using token-based authentication, token: {options.ApiToken}");
+            }
+            else
+            {
+                Trace.WriteLine("Using user-based authentication.");
+            }
+            Trace.WriteLine($"Language Setting: {_technologyStack} {_languageLevel}");
+            Trace.WriteLine($"Automated Audit: {(options.AutomatedAudit ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Express Scan: {(options.ExpressScan ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Open-source Report: {(options.OpensourceReport ? "Requested" : "Not Requested")}");
+            Trace.WriteLine($"Include Third-Party Libraries: {(options.IncludeThirdParty ? "True" : "False")}");
+            Trace.WriteLine($"Entitlement ID: {(options.EntitlementId == null ? "Auto Select" : options.EntitlementId.ToString())}");
+            Trace.WriteLine($"Assessment payload: {options.Source}");
+            Trace.WriteLine($"Log file: {"\"" + LogName + "\""}");
+
+            if (!options.Debug) return;
+            var extensions = new StringBuilder();
+            var last = SupportedExtensions.Last();
+
+            foreach (var s in SupportedExtensions)
+            {
+                if (s.Equals(last))
+                {
+                    extensions.Append(s);
+                }
+                else
+                {
+                    extensions.Append(s + ", ");
+                }
+            }
+            Trace.WriteLine($"Packaged file extensions: {extensions}");
+        } 
+        #endregion
+
+        #region Pre-run Checks
         /// <summary>
         ///  Checks the release to determine if it's retired, in progress, or paused
         /// </summary>
@@ -269,49 +324,30 @@ namespace FoDUploader
                 }
             }
         }
-
-        private static void PrintSelectedOptions(Options options)
+        /// <summary>
+        /// Detects if the application is running in an interactive console and, if not, sets the logging stream
+        /// </summary>
+        private static void CheckConsole()
         {
-
-            Trace.WriteLine(options.AppName);
-            Trace.WriteLine(options.Copyright + Environment.NewLine);
-            Trace.WriteLine("Selected options: ");
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (_isTokenAuth)
+            try
             {
-                Trace.WriteLine($"Using token-based authentication, token: {options.ApiToken}");
+                // ReSharper disable once UnusedVariable
+                var windowHeight = Console.WindowHeight;
+                _isConsole = true;
             }
-            else
+            catch
             {
-                Trace.WriteLine("Using user-based authentication.");
-            }
-            Trace.WriteLine($"Language Setting: {_technologyStack} {_languageLevel}");
-            Trace.WriteLine($"Automated Audit: {(options.AutomatedAudit ? "Requested" : "Not Requested")}");
-            Trace.WriteLine($"Express Scan: {(options.ExpressScan ? "Requested" : "Not Requested")}");
-            Trace.WriteLine($"Open-source Report: {(options.OpensourceReport ? "Requested" : "Not Requested")}");
-            Trace.WriteLine($"Include Third-Party Libraries: {(options.IncludeThirdParty ? "True" : "False")}");
-            Trace.WriteLine($"Entitlement ID: {(options.EntitlementId == null ? "Auto Select" : options.EntitlementId.ToString())}");
-            Trace.WriteLine($"Assessment payload: {options.Source}");
-            Trace.WriteLine($"Log file: {"\"" + LogName + "\""}");
 
-            if (!options.Debug) return;
-            var extensions = new StringBuilder();
-            var last = SupportedExtensions.Last();
+                _isConsole = false;
 
-            foreach (var s in SupportedExtensions)
-            {
-                if (s.Equals(last))
-                {
-                    extensions.Append(s);
-                }
-                else
-                {
-                    extensions.Append(s + ", ");
-                }
+                var streamwriter = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
+
+                Console.SetOut(streamwriter);
             }
-            Trace.WriteLine($"Packaged file extensions: {extensions}");
         }
+        #endregion
 
+        #region Utility
         /// <summary>
         /// Checks of path is already zipped if it is it submits as-is, if not, it zips the folder and all contents to a zip file appending a guid to the name,
         /// places in the tempPath provided
@@ -329,7 +365,7 @@ namespace FoDUploader
                 {
                     Trace.WriteLine("Using existing ZIP file.");
 
-                    if(_includeAllFiles)
+                    if (_includeAllFiles)
                     {
                         return zipPath;
                     }
@@ -350,7 +386,7 @@ namespace FoDUploader
 
                 var tempZipPath = Path.Combine(tempPath, OutputName + ".zip");
 
-                if (_includeAllFiles || _technologyStack.ToUpper() =="OBJECTIVE-C" || _technologyStack.ToUpper() =="SWIFT" || _technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
+                if (_includeAllFiles || _technologyStack.ToUpper() == "OBJECTIVE-C" || _technologyStack.ToUpper() == "SWIFT" || _technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
                 {
                     using (var zip = new ZipFile(tempZipPath))
                     {
@@ -359,14 +395,14 @@ namespace FoDUploader
                         if (zip.Entries.Count == 0)
                         {
                             Trace.WriteLine(
-                                $"Error: Selected path \"{zipPath}\" contains no files to ZIP. Please check your settings and try again.");
+                                $"Error: Selected path \"{zipPath}\" contains no valid files to ZIP. Please check your settings and try again.");
                             Environment.Exit(-1);
                         }
                         zip.Save();
                         Trace.WriteLine($"Created ZIP: {zip.Name}");
                         zipPath = tempZipPath;
                         return zipPath;
-                    } 
+                    }
                 }
                 // process supported extensions into ZIP, set zipPath to new ZIP, provide log output
 
@@ -398,30 +434,8 @@ namespace FoDUploader
             }
 
             return zipPath;
-        }
-
-        private static void ConfigureConsoleOutput()
-        {
-            try
-            {
-                // ReSharper disable once UnusedVariable
-                var windowHeight = Console.WindowHeight;
-                _isConsole = true;
-            }
-            catch {
-
-                _isConsole = false;
-
-                var streamwriter = new StreamWriter(Console.OpenStandardOutput()) {AutoFlush = true};
-
-                Console.SetOut(streamwriter);
-            }
-        }
-        private static NameValueCollection GetqueryParameters(UriBuilder postUrl)
-        {
-            var queryParameters = HttpUtility.ParseQueryString(postUrl.Query);
-            return queryParameters;
-        }
+        } 
+        #endregion
     }
 }
 

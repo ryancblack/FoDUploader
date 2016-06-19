@@ -1,7 +1,7 @@
 # FoDUploader
 This project is a MIT-licensed .NET Fortify on Demand assessment uploader with several convenience features.
 
-* The only dependency is .NET 4.5+
+* Requires NET 4.5+
 * Checks that an assessment for the target application is not in progress/paused before attempting to upload 
 * Checks for correct entitlement to scan before attempting to upload
 * Notifies if a selected assessment option, e.g. open-source reporting, Automated Audit, or Express Scan are requested, but not enabled for the account

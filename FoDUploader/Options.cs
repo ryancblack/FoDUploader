@@ -16,7 +16,7 @@ namespace FoDUploader
     class Options
     {
         public string AppName = "FoD Uploader 1.05";
-        public string Copyright = "HPE Security Fortify on Demand, Ryan Black";
+        public string Copyright = "HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.com";
 
         public string GetUsage()
         {
@@ -36,7 +36,7 @@ namespace FoDUploader
 
         }
 
-        [Option("source", HelpText = "The ZIP file, or directory to be zipped, for submission to Fortify on Demand.")]
+        [Option("source", HelpText = "The full path of the ZIP file, or directory to be zipped, for submission to Fortify on Demand. e.g. \"C:\\myfolder\\myapp.zip\" or \"C:\\myfolder\\myapp\" ")]
         public string Source { get; set; }
 
         [Option("username", HelpText = "Your portal username.", MutuallyExclusiveSet = "userauth")]

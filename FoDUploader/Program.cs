@@ -191,6 +191,7 @@ namespace FoDUploader
 
             if (_isConsole)
             {
+                Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }
         }
@@ -386,7 +387,7 @@ namespace FoDUploader
 
                 var tempZipPath = Path.Combine(tempPath, OutputName + ".zip");
 
-                if (_includeAllFiles || _technologyStack.ToUpper() == "OBJECTIVE-C" || _technologyStack.ToUpper() == "SWIFT" || _technologyStack.ToUpper() == "IOS") //may introduce "iOS" or "SWIFT" - ensure both are handled
+                if (_includeAllFiles || _technologyStack.ToUpper() == "OBJECTIVE-C" || _technologyStack.ToUpper() == "SWIFT" || _technologyStack.ToUpper().Contains("IOS") || _technologyStack.ToUpper() == "IOS SWIFT & OBJECTIVE-C/C++")
                 {
                     using (var zip = new ZipFile(tempZipPath))
                     {

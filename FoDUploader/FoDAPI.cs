@@ -384,28 +384,9 @@ namespace FoDUploader
             request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
 
-            // add tenant/scan parameters
-            request.AddQueryParameter("releaseId", _queryParameters.Get("pv"));
-            request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
-            request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
+            // add assessment-related parameters
 
-            // if the user has specified the entitlement ID they wish to use set that here.
-
-            request.AddQueryParameter("entitlementId", _entitlementId.ToString());
-            request.AddQueryParameter("entitlementFrequencyType", _entitlementFrequencyType);
-
-            if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
-            {
-                request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
-            }
-            else  // This is a workaround for HFD-1239 where it appears a language level may not be null for V3 regardless of the technology type
-            {
-                request.AddQueryParameter("languageLevel", "1.8");
-            }
-
-            // add optional assessment parameters for sonatype, automated audit, express scanning
-
-            request = AddOptionalParameters(request);
+            request = AddAssessmentParameters(request);
 
             request.AddQueryParameter("fragNo", fragNo.ToString());
             request.AddQueryParameter("offset", offset.ToString());
@@ -509,8 +490,27 @@ namespace FoDUploader
                 Trace.WriteLine(Environment.NewLine);
             }
         }
-        private RestRequest AddOptionalParameters(RestRequest request)
+        private RestRequest AddAssessmentParameters(RestRequest request)
         {
+            // add tenant/scan parameters
+            request.AddQueryParameter("releaseId", _queryParameters.Get("pv"));
+            request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
+            request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
+
+            // if the user has specified the entitlement ID they wish to use set that here.
+
+            request.AddQueryParameter("entitlementId", _entitlementId.ToString());
+            request.AddQueryParameter("entitlementFrequencyType", _entitlementFrequencyType);
+
+            if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
+            {
+                request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
+            }
+            else  // This is a workaround for HFD-1239 where it appears a language level may not be null for V3 regardless of the technology type
+            {
+                request.AddQueryParameter("languageLevel", "1.8");
+            }
+
             if (_doOpensourceReport)
             {
                 request.AddQueryParameter("doSonatypeScan", "true");

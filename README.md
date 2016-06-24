@@ -16,9 +16,8 @@ Proxy connections are supported automatically provided they are configured in In
 FoD Uploader 1.05
 Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.com
 
-  --source                The full path of the ZIP file, or directory to be 
-                          zipped, for submission to Fortify on Demand. e.g. 
-                          "C:\myfolder\myapp.zip" or "C:\myfolder\myapp"
+  --source                The path of the ZIP file, or directory to be 
+                          zipped, for submission to Fortify on Demand.
 
   --username              Your portal username.
 

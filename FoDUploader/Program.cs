@@ -32,7 +32,7 @@ namespace FoDUploader
         private static string _tenantCode = "";
         private static string _assessmentTypeId;
 
-        private static readonly string[] SupportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk", ".swift" };
+        private static readonly string[] SupportedExtensions = { ".java", ".rb", ".jsp", ".jspx", ".tag", ".tagx", ".tld", ".sql", ".cfm", ".php", ".phtml", ".ctp", ".pks", ".pkh", ".pkb", ".xml", ".config", ".settings", ".properties", ".dll", ".exe", ".inc", ".asp", ".vbscript", ".js", ".ini", ".bas", ".cls", ".vbs", ".frm", ".ctl", ".html", ".htm", ".xsd", ".wsdd", ".xmi", ".py", ".cfml", ".cfc", ".abap", ".xhtml", ".cpx", ".xcfg", ".jsff", ".as", ".mxml", ".cbl", ".cscfg", ".csdef", ".wadcfg", ".appxmanifest", ".wsdl", ".plist", ".bsp", ".abap", ".sln", ".sql",".csproj", ".cs", ".pdb", ".war",".ear", ".jar", ".class", ".aspx", ".apk", ".swift" };
 
         private static bool _isConsole;
 
@@ -119,9 +119,18 @@ namespace FoDUploader
                 _isTokenAuth = false;
             }
 
-            PrintSelectedOptions(options);
+            // Workaround for trailing slash in a folder bug in the CommandLine nuget library - will fix and submit a pull request on Github
 
-            var zipPath = "";
+            if(options.Source.EndsWith("\""))
+            {
+                options.Source = options.Source.Trim('"');
+            }
+
+            // Check specified source path
+
+            CheckSource(options);
+
+            PrintSelectedOptions(options);
 
             // If the user has selected to view entitlement information display it and exit
 
@@ -140,13 +149,7 @@ namespace FoDUploader
                 Environment.Exit(0);
             }
 
-            if (string.IsNullOrEmpty(options.Source))
-            {
-                Trace.WriteLine("Error: You must specify a source folder or ZIP file.");
-                Environment.Exit(-1);
-            }
-
-            zipPath = ZipFolder(options.Source);
+            var zipPath = ZipFolder(options.Source);
 
             var api = new FoDapi(options, zipPath, GetqueryParameters(new UriBuilder(options.UploadUrl)));
 
@@ -346,9 +349,41 @@ namespace FoDUploader
                 Console.SetOut(streamwriter);
             }
         }
+
+        /// <summary>
+        /// Checks the specified source arguemnent to ensure it can be read and, if it's a file, that is is a ZIP. If the path is relative a full path is returened.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>A full path to a ZIP file or a folder to ZIP</returns>
+        private static void CheckSource(Options options)
+        {
+            try
+            {
+                if (Directory.Exists(options.Source))
+                {
+                    if (!Path.IsPathRooted(options.Source))
+                    {
+                        options.Source = Path.GetFullPath(options.Source);
+                        return;
+                    }
+                }
+                if (!File.Exists(options.Source) || !Path.GetExtension(options.Source).ToLower().Equals(".zip"))
+                {
+                    Trace.WriteLine($"Error: \"{options.Source}\" is not a valid path to a ZIP file.");
+                    Environment.Exit(-1);
+                }
+            }
+            catch (Exception)
+            {
+                Trace.WriteLine($"Error: \"{options.Source}\" is not readable, please check your settings.");
+                Environment.Exit(-1);
+            }
+        }
+
         #endregion
 
         #region Utility
+
         /// <summary>
         /// Checks of path is already zipped if it is it submits as-is, if not, it zips the folder and all contents to a zip file appending a guid to the name,
         /// places in the tempPath provided
@@ -419,7 +454,7 @@ namespace FoDUploader
                     if (zip.Entries.Count == 0)
                     {
                         Trace.WriteLine(
-                            $"Error: Selected path \"{zipPath}\" contains no scannable files to ZIP. Please check your application folder and try again.");
+                            $"Error: Selected path \"{zipPath}\" contains no scannable files to ZIP. Please check your application folder contents and try again.");
                         Environment.Exit(-1);
                     }
                     zip.Save();

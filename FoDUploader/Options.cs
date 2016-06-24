@@ -36,7 +36,7 @@ namespace FoDUploader
 
         }
 
-        [Option("source", HelpText = "The full path of the ZIP file, or directory to be zipped, for submission to Fortify on Demand. e.g. \"C:\\myfolder\\myapp.zip\" or \"C:\\myfolder\\myapp\" ")]
+        [Option("source", HelpText = "The path of the ZIP file, or directory to be zipped, for submission to Fortify on Demand.")]
         public string Source { get; set; }
 
         [Option("username", HelpText = "Your portal username.", MutuallyExclusiveSet = "userauth")]

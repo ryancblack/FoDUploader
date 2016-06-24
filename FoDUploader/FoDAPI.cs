@@ -431,16 +431,16 @@ namespace FoDUploader
 
         #region Utility Methods
         /// <summary>
-        ///  Sets user-specified entitlement information or automatically determines what should be used based on Subscription -> available units -> units, even if negative 
-        ///  This is poorly coded and should be re-written once I am sure we even need to set this information in this way - Ryan
+        ///  Sets user-specified entitlement information or automatically determines what should be used based on Subscription -> available units -> units, even if negative
+        ///  The first valid entitlement is used if not manually set
         /// </summary>
         private void SetEntitlementInformation()
         {
 
             // review to ensure this make sense for both unit-based and subscription
 
-            var staticEntitlementTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static")); //  && !type.EntitlementId.Equals(-1) && type.UnitsAvailable >= 1
-            var subscriptionEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("Subscription") && !type.EntitlementId.Equals(-1));
+            var staticEntitlementTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1)); //  && !type.EntitlementId.Equals(-1) && type.UnitsAvailable >= 1
+            var subscriptionEntitlements = staticEntitlementTypes.Where(type => type.FrequencyType.Equals("Subscription") && !type.EntitlementId.Equals(-1)); // && !type.EntitlementId.Equals(-1)
 
             // lookup the correct frequency type by the user-specified entitlement ID
 
@@ -448,7 +448,7 @@ namespace FoDUploader
             {
                 _entitlementId = subscriptionEntitlements.First().EntitlementId;
                 _entitlementFrequencyType = subscriptionEntitlements.First().FrequencyType;
-                Trace.WriteLine($"Note: Auto-selected subscription Entitlement ID: {_entitlementId}.");
+                Trace.WriteLine($"Note: Auto-selected subscription entitlement ID: {_entitlementId}.");
                 return;
             }
 
@@ -456,10 +456,9 @@ namespace FoDUploader
 
             if (singlescanEntitlements.Any())
             {
-                // will use the first one for now, may add logic to prefer the one ending soonest or with the least remaining credits - ask PM
                 _entitlementId = singlescanEntitlements.First().EntitlementId;
                 _entitlementFrequencyType = singlescanEntitlements.First().FrequencyType;
-                Trace.WriteLine($"Note: Auto-selected single scan Entitlement ID: {_entitlementId}.");
+                Trace.WriteLine($"Note: Auto-selected single scan entitlement ID: {_entitlementId}.");
                 return;
             }
             // bail out if we cannot find any entitlements at all to use.
@@ -472,7 +471,9 @@ namespace FoDUploader
         /// </summary>
         public void ListAssessmentTypes()
         {
-            var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1)); // TODO: find out if static premiums should be used, if so we need to know what to use for EntitlementID.
+            // I'm leaving premium assessments out since they have a corresponding entitlement to use for static only
+
+            var staticAssessmentTypes = GetAssessmentTypes().Items.Where(type => type.ScanType.Equals("Static") && !type.EntitlementId.Equals(-1));  // && !type.EntitlementId.Equals(-1)
 
             Trace.WriteLine("Listing all valid assessment types...");
             Trace.WriteLine(Environment.NewLine);
@@ -497,18 +498,13 @@ namespace FoDUploader
             request.AddQueryParameter("assessmentTypeId", _queryParameters.Get("astid"));
             request.AddQueryParameter("technologyStack", _queryParameters.Get("ts"));
 
-            // if the user has specified the entitlement ID they wish to use set that here.
-
             request.AddQueryParameter("entitlementId", _entitlementId.ToString());
             request.AddQueryParameter("entitlementFrequencyType", _entitlementFrequencyType);
 
+            // Language level should only be set on the following language types
             if (_queryParameters.Get("ts").Equals("JAVA/J2EE") || _queryParameters.Get("ts").Equals(".NET") || _queryParameters.Get("ts").Equals("PYTHON"))
             {
                 request.AddQueryParameter("languageLevel", _queryParameters.Get("ll"));
-            }
-            else  // This is a workaround for HFD-1239 where it appears a language level may not be null for V3 regardless of the technology type
-            {
-                request.AddQueryParameter("languageLevel", "1.8");
             }
 
             if (_doOpensourceReport)
@@ -523,7 +519,7 @@ namespace FoDUploader
             {
                 request.AddQueryParameter("scanPreferenceId", "2");
             }
-            if (_includeThirdParty) // I am unsure if it's safe to let the default work so I'm explicit. 
+            if (_includeThirdParty)
             {
                 request.AddQueryParameter("excludeThirdPartyLibs", "false");
             }

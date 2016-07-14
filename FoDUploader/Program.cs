@@ -364,8 +364,8 @@ namespace FoDUploader
                     if (!Path.IsPathRooted(options.Source))
                     {
                         options.Source = Path.GetFullPath(options.Source);
-                        return;
                     }
+                    return;
                 }
                 if (!File.Exists(options.Source) || !Path.GetExtension(options.Source).ToLower().Equals(".zip"))
                 {

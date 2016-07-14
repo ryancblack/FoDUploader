@@ -15,7 +15,7 @@ namespace FoDUploader
 {
     class Options
     {
-        public string AppName = "FoD Uploader 1.05";
+        public string AppName = "FoD Uploader 1.06";
         public string Copyright = "HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.com";
 
         public string GetUsage()

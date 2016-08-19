@@ -17,6 +17,7 @@ using System.Text;
 using FoDUploader.API;
 using RestSharp;
 using RestSharp.Deserializers;
+using System.Net;
 
 namespace FoDUploader
 {
@@ -111,6 +112,7 @@ namespace FoDUploader
 
             var client = new RestClient(sb.ToString());
             var request = new RestRequest("", Method.POST);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             request.AddParameter("scope", "https://hpfod.com/tenant");
 
@@ -167,6 +169,7 @@ namespace FoDUploader
 
             var client = new RestClient(sb.ToString());
             var request = new RestRequest("", Method.GET);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             request.AddHeader("Auhorization", "Bearer " + _accessToken);
 
@@ -203,6 +206,7 @@ namespace FoDUploader
 
             var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
             var request = new RestRequest(Method.GET);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
@@ -231,6 +235,7 @@ namespace FoDUploader
 
             var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
             var request = new RestRequest(Method.GET);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             request.AddQueryParameter("scantype", "static");
 
@@ -263,6 +268,7 @@ namespace FoDUploader
 
             var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
             var request = new RestRequest(Method.GET);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             request.AddHeader("Authorization", "Bearer " + _accessToken);
             request.AddHeader("Content-Type", "application/octet-stream");
@@ -303,6 +309,7 @@ namespace FoDUploader
             endpoint.Append("/static-scans/start-scan");
 
             var client = new RestClient(endpoint.ToString()) { Timeout = Globaltimeoutinminutes * 120 };
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
             // Read it in chunks
             var uploadStatus = "";

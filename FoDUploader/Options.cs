@@ -15,7 +15,7 @@ namespace FoDUploader
 {
     class Options
     {
-        public string AppName = "FoD Uploader 1.06";
+        public string AppName = "FoD Uploader 1.07";
         public string Copyright = "HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.com";
 
         public string GetUsage()
@@ -75,7 +75,7 @@ namespace FoDUploader
         [Option("entitlementId", HelpText = "Optionally set an entitlement ID to use for the assessment")]
         public int? EntitlementId { get; set; }
 
-        [Option("debug", DefaultValue = false, HelpText = "Verbose setting, API call, POST detail, and entitlement information will be written to the console.")]
+        [Option("debug", DefaultValue = false, HelpText = "Verbose setting, API calls, POST details, and entitlement information will be written to the console.")]
         public bool Debug { get; set; }
 
     }

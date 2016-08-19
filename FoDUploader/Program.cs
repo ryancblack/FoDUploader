@@ -119,7 +119,7 @@ namespace FoDUploader
                 _isTokenAuth = false;
             }
 
-            // Workaround for trailing slash in a folder bug in the CommandLine nuget library - will fix and submit a pull request on Github
+            // Workaround for trailing quote character in a folder bug in the CommandLine nuget library - will fix and submit a pull request on Github
 
             if(options.Source.EndsWith("\""))
             {

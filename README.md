@@ -13,7 +13,7 @@ Proxy connections are supported automatically provided they are configured in In
 
 **Options**
 
-FoD Uploader 1.05
+FoD Uploader
 Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.com
 
   --source                The path of the ZIP file, or directory to be 
@@ -55,10 +55,10 @@ Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.c
                           submitted.
 
   --entitlementId         Optionally set an entitlement ID to use for the 
-                          assessment
+                          assessment.
 
-  --debug                 (Default: False) Verbose setting, API call, POST 
-                          detail, and entitlement information will be written 
+  --debug                 (Default: False) Verbose setting, API calls, POST 
+                          details, and entitlement information will be written 
                           to the console.
 
 

@@ -57,8 +57,8 @@ Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.c
   --entitlementId         Optionally set an entitlement ID to use for the 
                           assessment.
 
-  --debug                 (Default: False) Verbose setting, API call, POST 
-                          detail, and entitlement information will be written 
+  --debug                 (Default: False) Verbose setting, API calls, POST 
+                          details, and entitlement information will be written 
                           to the console.
 
 

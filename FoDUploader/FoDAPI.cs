@@ -520,11 +520,11 @@ namespace FoDUploader
             }
             if (_doAutomatedAudit)
             {
-                request.AddQueryParameter("auditPreferenceId", "2");
+                request.AddQueryParameter("auditPreferenceType", "2");
             }
             if (_doExpressScan)
             {
-                request.AddQueryParameter("scanPreferenceId", "2");
+                request.AddQueryParameter("scanPreferenceType", "2");
             }
             if (_includeThirdParty)
             {

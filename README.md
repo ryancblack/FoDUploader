@@ -30,19 +30,19 @@ Copyright (C) 2016 HPE Security Fortify on Demand, Ryan Black - ryan.black@hpe.c
   --uploadURL             Required. Your BSI URL for the target application, 
                           obtained in the customer portal.
 
-  --opensourceReport      (Default: False) If set to true, and enabled in the 
+  --opensourceReport      (Default: False) If flag is present, and enabled in the 
                           tenant, an open-source report will be requested.
 
-  --automatedAudit        (Default: False) If set to true, and enabled in the 
+  --automatedAudit        (Default: False) If flag is present, and enabled in the 
                           tenant, the Automated Audit feature will be requested.
 
-  --expressScan           (Default: False) If set to true, and enabled in the 
+  --expressScan           (Default: False) If flag is present, and enabled in the 
                           tenant, the Express Scan feature will be requested.
 
-  --includeThirdParty     (Default: False) If set to true third-party libraries
+  --includeThirdParty     (Default: False) If flag is present third-party libraries
                           will be included in assessment results.
 
-  --includeAllFiles       (Default: False) If set to true all files, including 
+  --includeAllFiles       (Default: False) If flag is present all files, including 
                           extraneous non-scannable content, will be submitted 
                           to Fortify on Demand. The default of "false" will 
                           greatly reduce the size of the submission with no 

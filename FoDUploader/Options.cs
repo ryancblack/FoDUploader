@@ -54,19 +54,19 @@ namespace FoDUploader
         [Option("uploadURL", Required = true, HelpText = "Your BSI URL for the target application, obtained in the customer portal.")]
         public string UploadUrl { get; set; }
 
-        [Option("opensourceReport", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, an open-source report will be requested.")]
+        [Option("opensourceReport", DefaultValue = false, HelpText = "If flag is present, and enabled in the tenant, an open-source report will be requested.")]
         public bool OpensourceReport { get; set; }
 
-        [Option("automatedAudit", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, the Automated Audit feature will be requested.")]
+        [Option("automatedAudit", DefaultValue = false, HelpText = "If flag is present, and enabled in the tenant, the Automated Audit feature will be requested.")]
         public bool AutomatedAudit { get; set; }
 
-        [Option("expressScan", DefaultValue = false, HelpText = "If set to true, and enabled in the tenant, the Express Scan feature will be requested.")]
+        [Option("expressScan", DefaultValue = false, HelpText = "If flag is present, and enabled in the tenant, the Express Scan feature will be requested.")]
         public bool ExpressScan { get; set; }
 
-        [Option("includeThirdParty", DefaultValue = false, HelpText = "If set to true third-party libraries will be included in assessment results.")]
+        [Option("includeThirdParty", DefaultValue = false, HelpText = "If flag is present third-party libraries will be included in assessment results.")]
         public bool IncludeThirdParty { get; set; }
 
-        [Option("includeAllFiles", DefaultValue = false, HelpText = "If set to true all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
+        [Option("includeAllFiles", DefaultValue = false, HelpText = "If flag is present all files, including extraneous non-scannable content, will be submitted to Fortify on Demand. The default of \"false\" will greatly reduce the size of the submission with no impact to assessment quality.")]
         public bool IncludeAllPayload { get; set;}
 
         [Option("displayEntitlement", DefaultValue = false, HelpText = "Displays entitlement information related to the application release ID. This option may be used to determine which entitlement is desired for manual specification; if enabled no assessment is submitted.")]

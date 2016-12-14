@@ -18,6 +18,7 @@ using FoDUploader.API;
 using RestSharp;
 using RestSharp.Deserializers;
 using System.Net;
+using System.Web;
 
 namespace FoDUploader
 {
@@ -313,6 +314,7 @@ namespace FoDUploader
 
             // Read it in chunks
             var uploadStatus = "";
+            IRestResponse response = null;
 
             using (var fs = new FileStream(_submissionZip, FileMode.Open))
             {
@@ -338,13 +340,14 @@ namespace FoDUploader
                             fragmentNumber = -1;
                             Array.Resize(ref sendByteBuffer, bytesRead);
                             Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
-                            var lastPost = SendData(client, sendByteBuffer, fragmentNumber, offset);
-                            uploadStatus = lastPost.StatusCode.ToString();
+                            response = SendData(client, sendByteBuffer, fragmentNumber, offset);
+                            uploadStatus = response.StatusCode.ToString();
                             break;
                         }
                         Array.Copy(readByteBuffer, sendByteBuffer, sendByteBuffer.Length);
-                        var post = SendData(client, sendByteBuffer, fragmentNumber++, offset);
-                        uploadStatus = post.StatusCode.ToString();
+                        response = SendData(client, sendByteBuffer, fragmentNumber++, offset);
+
+                        uploadStatus = response.StatusCode.ToString();
                         offset += bytesRead;
                         bytesSent += bytesRead;
 
@@ -373,7 +376,16 @@ namespace FoDUploader
                 else
                 {
                     Trace.WriteLine("Status: " + uploadStatus);
-                    Trace.WriteLine("Error submitting to Fortify on Demand.");
+                    if (uploadStatus.Equals("BadRequest"))
+                    {
+                        var errors = new JsonDeserializer().Deserialize<ErrorResponse>(response);
+                        foreach (var e in errors.Errors)
+                            Trace.WriteLine($"Error: {e.Message}");
+                    }
+                    else
+                    {
+                        Trace.WriteLine("Error submitting to Fortify on Demand.");
+                    }
                     Environment.Exit(-1);
                 }
             }
@@ -415,10 +427,12 @@ namespace FoDUploader
                 response = client.Execute(request);
                 httpStatus = response.StatusCode.ToString();
                 attempts++;
-                if (httpStatus.Equals("Accepted") || httpStatus.Equals("OK"))  // the final response for the -1 fragment is OK instead of Accepted
+                // We should also break here on BadRequest as the api returns error messages in this case that we can parse.
+                if (httpStatus.Equals("Accepted") || httpStatus.Equals("OK") || httpStatus.Equals("BadRequest"))  // the final response for the -1 fragment is OK instead of Accepted
                 {
                     break;
                 }
+
                 if (_isDebug)
                 {
                     Trace.WriteLine("Error: POST Response: " + response.Content);
@@ -433,7 +447,7 @@ namespace FoDUploader
             while (httpStatus != "OK" || attempts < Maxretries);
 
             return response;
-        } 
+        }
         #endregion
 
         #region Utility Methods
@@ -468,9 +482,12 @@ namespace FoDUploader
                 Trace.WriteLine($"Note: Auto-selected single scan entitlement ID: {_entitlementId}.");
                 return;
             }
-            // bail out if we cannot find any entitlements at all to use.
-            Trace.WriteLine("Error submitting to Fortify on Demand: You have no valid assessment entitlements. Please contact your Technical Account Manager");
-            Environment.Exit(-1);
+
+            // Will attempt to start scan with negative entitlement. This is caught on the api side if entitlements are required to start a scan.
+            _entitlementFrequencyType = "SingleScan";
+            _entitlementId = -1;
+            Trace.WriteLine($"Note: Auto-selected single scan entitlement ID: {_entitlementId}.");
+            return;
         }
 
         /// <summary>

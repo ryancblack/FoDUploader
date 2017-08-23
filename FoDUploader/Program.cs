@@ -190,13 +190,6 @@ namespace FoDUploader
 
             api.RetireToken();
 
-            // hold console open - ask around if this is something we want to do for interactive runs? Feedback has been conflicting regarding this behavior.
-
-            if (_isConsole)
-            {
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-            }
         }
 
         #region Display Information
